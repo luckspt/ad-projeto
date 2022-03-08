@@ -2,16 +2,16 @@
 # -*- coding: utf-8 -*-
 """
 Aplicações Distribuídas - Projeto 1 - lock_server.py
-Grupo:
-Números de aluno:
+Grupo: 21
+Números de aluno: 56895, 56926
 """
 
 # Zona para fazer importação
+import traceback
 from argparse import ArgumentParser
 from time import time
 from functools import reduce
 from typing import Dict, Union, Tuple
-
 
 ###############################################################################
 import sock_utils
@@ -248,9 +248,9 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
 
     parser.add_argument("port", help="Porto TCP onde escutará por pedidos de ligação", type=int)
 
-    parser.add_argument("n", help="Número de recursos que serão geridos pelo Servidor")
+    parser.add_argument("n", help="Número de recursos que serão geridos pelo Servidor", type=int)
 
-    parser.add_argument("k", help="Número de bloqueios permitidos em cada recurso")
+    parser.add_argument("k", help="Número de bloqueios permitidos em cada recurso", type=int)
 
     args = parser.parse_args().__dict__
 
@@ -262,6 +262,7 @@ def main() -> None:
         args = parse()
 
         socket = sock_utils.create_tcp_server_socket(args['address'], args['port'], 1)
+        pool = lock_pool(args['n'], args['k'])
         while True:
             (conn_sock, (addr, port)) = socket.accept()
 
@@ -269,11 +270,32 @@ def main() -> None:
 
             msg = conn_sock.recv(1024)
             print(f'recebi {msg.decode("utf-8")}')
+            cmd, *cargs = msg.split()
 
-            conn_sock.sendall(b'batatas')
+            res = []
+
+            if cmd == 'LOCK':
+                # TODO perguntar ao prof se é preciso validar
+                resp = pool.lock(*cargs)
+                res.append(resp)
+            if cmd == 'UNLOCK':
+                resp = pool.unlock(cargs[0], cargs[1], cargs[2])
+                res.append(resp)
+            if cmd == 'STATUS':
+                resp = pool.status(cargs[0])
+                res.append(resp)
+            if cmd == 'STATS':
+                resp = pool.stats(cargs[0], cargs[1])
+                res.append(resp)
+            if cmd == 'PRINT':
+                res.append(str(pool))
+
+            parsed_res = ' '.join(res)
+            conn_sock.sendall(parsed_res.encode('utf-8'))
             conn_sock.close()
     except Exception as e:
         print('Error:', e)
+        traceback.print_exc()
 
 
 if __name__ == '__main__':
