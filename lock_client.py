@@ -9,7 +9,7 @@ Números de aluno: 56895, 56926
 import traceback
 from argparse import ArgumentParser
 from time import sleep
-from typing import Dict, Union, Tuple, List
+from typing import Dict, Union, Tuple
 import net_client
 
 
@@ -70,7 +70,6 @@ def main() -> None:
                     elif len(cargs) > 3:
                         raise Exception('LOCK too many arguments')
 
-                    print(cargs)
                     if cargs[0] not in {'R', 'W'}:
                         raise Exception('LOCK type must be R or W')
 
@@ -78,7 +77,7 @@ def main() -> None:
                         raise Exception('LOCK resource_id must be a digit')
 
                     if not cargs[2].isdigit():
-                        raise Exception('LOCK resource_id must be a digit')
+                        raise Exception('LOCK time_limit must be a digit')
 
                     cargs.append(args['client_id'])
                 elif cmd == 'UNLOCK':
@@ -101,23 +100,22 @@ def main() -> None:
                 elif cmd == 'STATS':
                     if len(cargs) < 1:
                         raise Exception('STATS subcommand is required')
-                    elif len(cargs) > 1:
-                        raise Exception('STATS too many arguments')
-
                     scmd, *sargs = cargs
+
                     if scmd == 'K':
                         if len(sargs) < 1:
                             raise Exception('STATS resource_id is required')
-                        elif len(cargs) > 1:
+                        elif len(sargs) > 1:
                             raise Exception('STATS too many arguments')
                         pass
                     elif scmd == 'N':
-                        pass
-                    if scmd == 'D':
-                        pass
+                        if len(cargs) > 1:
+                            raise Exception('STATS too many arguments')
+                    elif scmd == 'D':
+                        if len(cargs) > 1:
+                            raise Exception('STATS too many arguments')
                     else:
                         raise Exception('STATS subcommand must be K, N, or D')
-
                 elif cmd == 'PRINT':
                     pass
                 else:
@@ -133,7 +131,6 @@ def main() -> None:
             res = client.send_receive(cmd_parsed)
             client.close()
 
-            # TODO Trabalhar a resposta
             print(res)
 
     except Exception as e:

@@ -12,9 +12,9 @@ from argparse import ArgumentParser
 from time import time
 from functools import reduce
 from typing import Dict, Union, Tuple
+import sock_utils
 
 ###############################################################################
-import sock_utils
 
 
 class resource_lock:
@@ -25,7 +25,7 @@ class resource_lock:
         self.resource_id = resource_id
         self.write_lock = (None, 0)  # (client_id, deadline)
         self.read_lock = {}
-        self.state = None
+        self.state = 'UNLOCKED'
         self.write_lock_count = 0
 
     # ainda nao esta ok LISTA
@@ -63,6 +63,7 @@ class resource_lock:
         """
         self.write_lock = (None, 0)
         self.read_lock = {}  # TODO necessário ?
+        self.state = 'UNLOCKED'
 
     def unlock(self, type: str, client_id: str):
         """
@@ -122,16 +123,16 @@ class resource_lock:
         esta função é usada, por exemplo, se uma instância da classe for
         passada à função print ou str.
         """
-        output = self.state
+        output = f'{self.state} {self.write_lock_count}'
         # int maior =
         # Se o recurso está bloqueado para a escrita:
         # R <num do recurso> LOCKED-W <vezes bloqueios de escrita> <id do cliente> <deadline do bloqueio de escrita>
         if self.state == 'LOCKED-W':
-            output = f' {self.write_lock_count} {self.self.write_lock[0]} {self.write_lock[1]}'
+            output += f' {self.write_lock[0]} {self.write_lock[1]}'
         # Se o recurso está bloqueado para a leitura:
         # R <num do recurso> LOCKED-R <vezes bloqueios de escrita> <num bloqueios de leitura atuais> <último deadline dos bloqueios de leitura>
-        if self.state == 'LOCKED-R':
-            output = f' {self.write_lock_count} {len(self.read_lock)} {max(self.read_lock.values())}'
+        elif self.state == 'LOCKED-R':
+            output += f' {len(self.read_lock)} {max(self.read_lock.values())}'
 
         return output
 
@@ -202,7 +203,7 @@ class lock_pool:
 
         return resource.state
 
-    def stats(self, option: str, resource_id: int):
+    def stats(self, option: str, resource_id: int) -> Union[int, str]:
         """
         Obtém o estado do serviço de gestão de bloqueios. Se option for K, retorna <número de 
         bloqueios feitos no recurso resource_id> ou UNKNOWN RESOURCE. Se option for N, retorna 
@@ -230,7 +231,7 @@ class lock_pool:
         passada à função print ou str.
         """
         return '\n'.join(
-            map(lambda r, i: f'R {i + 1} {r}', enumerate(self.resources))
+            map(lambda r: f'R {r[0] + 1} {r[1]}', enumerate(self.resources))
         )
 
 
@@ -269,25 +270,30 @@ def main() -> None:
             print('ligado a %s no porto %s' % (addr, port))
 
             msg = conn_sock.recv(1024)
-            print(f'recebi {msg.decode("utf-8")}')
-            cmd, *cargs = msg.split()
+            cmd, *cargs = msg.decode('utf-8').split()
 
             res = []
 
+            pool.clear_expired_locks()
+
             if cmd == 'LOCK':
                 # TODO perguntar ao prof se é preciso validar
-                resp = pool.lock(*cargs)
+                resp = pool.lock(cargs[0], int(cargs[1]), cargs[3], int(cargs[2]))
                 res.append(resp)
-            if cmd == 'UNLOCK':
-                resp = pool.unlock(cargs[0], cargs[1], cargs[2])
+            elif cmd == 'UNLOCK':
+                resp = pool.unlock(cargs[0], int(cargs[1]), cargs[2])
                 res.append(resp)
-            if cmd == 'STATUS':
-                resp = pool.status(cargs[0])
+            elif cmd == 'STATUS':
+                resp = pool.status(int(cargs[0]))
                 res.append(resp)
-            if cmd == 'STATS':
-                resp = pool.stats(cargs[0], cargs[1])
-                res.append(resp)
-            if cmd == 'PRINT':
+            elif cmd == 'STATS':
+                if len(cargs) < 1:
+                    raise Exception('STATS subcommand is required')
+
+                scmd, *sargs = cargs
+                resp = pool.stats(scmd, int(sargs[0]) if scmd == 'K' else None)
+                res.append(str(resp))
+            elif cmd == 'PRINT':
                 res.append(str(pool))
 
             parsed_res = ' '.join(res)
