@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Aplicações Distribuídas - Projeto 1 - net_client.py
-Grupo:
-Números de aluno:
+Grupo: 21
+Números de aluno: 56895, 56926
 """
 
 # zona para fazer importação

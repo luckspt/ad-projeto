@@ -96,7 +96,6 @@ def main() -> None:
                 elif cmd == 'STATUS':
                     if len(cargs) < 1:
                         raise Exception('STATUS resource_id is required')
-                    pass
                 elif cmd == 'STATS':
                     if len(cargs) < 1:
                         raise Exception('STATS subcommand is required')
@@ -107,22 +106,22 @@ def main() -> None:
                             raise Exception('STATS resource_id is required')
                         elif len(sargs) > 1:
                             raise Exception('STATS too many arguments')
-                        pass
                     elif scmd == 'N':
-                        if len(cargs) > 1:
+                        if len(sargs) > 0:
                             raise Exception('STATS too many arguments')
                     elif scmd == 'D':
-                        if len(cargs) > 1:
+                        if len(sargs) > 0:
                             raise Exception('STATS too many arguments')
                     else:
                         raise Exception('STATS subcommand must be K, N, or D')
                 elif cmd == 'PRINT':
-                    pass
+                    if len(cargs) > 0:
+                        raise Exception('PRINT too many arguments')
                 else:
                     raise Exception('UNKNOWN COMMAND')
             except Exception as e:
                 print(e)
-                traceback.print_exc()
+                # traceback.print_exc()
                 continue
 
             cmd_parsed = ' '.join([cmd, *cargs])
@@ -132,7 +131,9 @@ def main() -> None:
             client.close()
 
             print(res)
-
+    except KeyboardInterrupt:
+        print('si señor')
+        exit()
     except Exception as e:
         print('Error:', e)
 

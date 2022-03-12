@@ -1,10 +1,17 @@
+# -*- coding: utf-8 -*-
+"""
+Aplicações Distribuídas - Projeto 1 - sock_utils.py
+Grupo: 21
+Números de aluno: 56895, 56926
+"""
+
 import socket as s
 from typing import Union
 
 
 def create_tcp_server_socket(address, port, queue_size):
     sock = s.socket(s.AF_INET, s.SOCK_STREAM)
-    sock.setsockopt(s.SOL_SOCKET, s.SO_REUSEADDR, 1)  # TODO não funciona?
+    sock.setsockopt(s.SOL_SOCKET, s.SO_REUSEADDR, 1)
     sock.bind((address, port))
     sock.listen(queue_size)
     return sock

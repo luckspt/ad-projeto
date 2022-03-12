@@ -14,6 +14,7 @@ from functools import reduce
 from typing import Dict, Union, Tuple
 import sock_utils
 
+
 ###############################################################################
 
 
@@ -24,7 +25,7 @@ class resource_lock:
         """
         self.resource_id = resource_id
         self.write_lock = (None, 0)  # (client_id, deadline)
-        self.read_lock = {}
+        self.read_lock = []  # (client_id, deadline)
         self.state = 'UNLOCKED'
         self.write_lock_count = 0
 
@@ -53,7 +54,7 @@ class resource_lock:
             else:
                 self.state = 'LOCKED-R'
                 deadline = time() + time_limit
-                self.read_lock[client_id] = deadline
+                self.read_lock.append((client_id, deadline))
                 return 'OK'
 
     def release(self):
@@ -62,7 +63,7 @@ class resource_lock:
         ao bloqueio.
         """
         self.write_lock = (None, 0)
-        self.read_lock = {}  # TODO necessário ?
+        self.read_lock = []
         self.state = 'UNLOCKED'
 
     def unlock(self, type: str, client_id: str):
@@ -83,26 +84,28 @@ class resource_lock:
 
             return 'OK'
         else:  # type == 'R'
-            if self.state == 'LOCKED-R' and client_id in self.read_lock:
-                del self.read_lock[client_id]
+            if self.state == 'LOCKED-R':
+                ok = False
+                for i, concessao in enumerate(self.read_lock):
+                    if concessao[0] == client_id:
+                        self.read_lock.pop(i)
 
                 if len(self.read_lock) == 0:
                     self.state = 'UNLOCKED'
 
-                return 'OK'
+                if ok:
+                    return 'OK'
 
         # Se o cliente não tiver lock no recurso
         return 'NOK'
 
-    # TODO perguntar ao prof já que não há encapsulamento
     def status(self):
         """
-        Obtém o estado do recurso. Retorna LOCKED-W ou LOCKED-R ou UNLOCKED 
+        Obtém o estado do recurso. Retorna LOCKED-W ou LOCKED-R ou UNLOCKED,
         ou DISABLED.
         """
         return self.state
 
-    # TODO perguntar ao prof já que não há encapsulamento
     def stats(self):
         """
         Retorna o número de bloqueios de escrita feitos neste recurso. 
@@ -114,8 +117,8 @@ class resource_lock:
         Coloca o recurso como desabilitado incondicionalmente, alterando os 
         valores associados à sua disponibilidade.
         """
-        self.state = 'DISABLE'
         self.release()  # TODO necessário?
+        self.state = 'DISABLE'
 
     def __repr__(self):
         """
@@ -129,10 +132,14 @@ class resource_lock:
         # R <num do recurso> LOCKED-W <vezes bloqueios de escrita> <id do cliente> <deadline do bloqueio de escrita>
         if self.state == 'LOCKED-W':
             output += f' {self.write_lock[0]} {self.write_lock[1]}'
-        # Se o recurso está bloqueado para a leitura:
-        # R <num do recurso> LOCKED-R <vezes bloqueios de escrita> <num bloqueios de leitura atuais> <último deadline dos bloqueios de leitura>
+        # Se o recurso está bloqueado para a leitura: R <num do recurso> LOCKED-R <vezes bloqueios de escrita> <num
+        # bloqueios de leitura atuais> <último deadline dos bloqueios de leitura>
         elif self.state == 'LOCKED-R':
-            output += f' {len(self.read_lock)} {max(self.read_lock.values())}'
+            qtd_clientes = len(set(map(lambda c: c[0], self.read_lock)))
+            max_concessao = reduce(lambda acc, c: acc if acc > c[1] else c[1]
+                                   , self.read_lock
+                                   , 0)  # (client_id, deadline)
+            output += f' {qtd_clientes} {max_concessao}'
 
         return output
 
@@ -140,15 +147,15 @@ class resource_lock:
 ###############################################################################
 
 class lock_pool:
-    def __init__(self, N: int, K: int):
+    def __init__(self, n: int, k: int):
         """
         Define um array com um conjunto de resource_locks para N recursos. 
         Os locks podem ser manipulados pelos métodos desta classe. 
         Define K, o número máximo de bloqueios de escrita permitidos para cada 
         recurso. Ao atingir K bloqueios de escrita, o recurso fica desabilitado.
         """
-        self.resources = [resource_lock(i) for i in range(N)]
-        self.max_resource_locks = K
+        self.resources = [resource_lock(i) for i in range(n)]
+        self.max_resource_locks = k
 
     def clear_expired_locks(self):
         """
@@ -158,12 +165,15 @@ class lock_pool:
         """
         for resource in self.resources:
             now = time()
-            if resource.state == 'LOCKED-W':
+            if resource.status() == 'LOCKED-W':
                 if resource.write_lock[1] != 0 and resource.write_lock[1] < now:
-                    resource.release()
-            elif resource.state == 'LOCKED-R':
+                    if resource.stats() >= self.max_resource_locks:
+                        resource.disable()
+                    else:
+                        resource.release()
+            elif resource.status() == 'LOCKED-R':
                 # TODO confirmar
-                if all(t < now for t in resource.read_lock.values()):
+                if all(t[1] < now for t in resource.read_lock):
                     resource.release()
 
     def lock(self, type: str, resource_id: int, client_id: str, time_limit: int):
@@ -175,7 +185,7 @@ class lock_pool:
             return 'UNKNOWN RESOURCE'
 
         resource = self.resources[resource_id - 1]
-        if type == 'W' and resource.write_lock_count >= self.max_resource_locks:
+        if type == 'W' and resource.stats() >= self.max_resource_locks:
             return 'NOK'
 
         return resource.lock(type, client_id, time_limit)
@@ -189,7 +199,12 @@ class lock_pool:
             return 'UNKNOWN RESOURCE'
 
         resource = self.resources[resource_id - 1]
-        return resource.unlock(type, client_id)
+
+        res = resource.unlock(type, client_id)
+        if resource.stats() >= self.max_resource_locks:
+            resource.disable()
+
+        return res
 
     def status(self, resource_id: int):
         """
@@ -201,7 +216,7 @@ class lock_pool:
 
         resource = self.resources[resource_id - 1]
 
-        return resource.state
+        return resource.status()
 
     def stats(self, option: str, resource_id: int) -> Union[int, str]:
         """
@@ -216,11 +231,11 @@ class lock_pool:
 
             resource = self.resources[resource_id - 1]
 
-            return resource.write_lock_count
+            return resource.stats()
         elif option == 'N':
-            return reduce(lambda acc, r: acc + int(r.state == 'UNLOCKED'), self.resources, 0)
+            return reduce(lambda acc, r: acc + int(r.status() == 'UNLOCKED'), self.resources, 0)
         elif option == 'D':
-            return reduce(lambda acc, r: acc + int(r.state == 'DISABLED'), self.resources, 0)
+            return reduce(lambda acc, r: acc + int(r.status() == 'DISABLED'), self.resources, 0)
         else:
             return 'UNKNOWN OPTION'
 
@@ -267,7 +282,7 @@ def main() -> None:
         while True:
             (conn_sock, (addr, port)) = socket.accept()
 
-            print('ligado a %s no porto %s' % (addr, port))
+            print(f'Ligado a {addr} no porto {port}')
 
             msg = conn_sock.recv(1024)
             cmd, *cargs = msg.decode('utf-8').split()
@@ -276,32 +291,84 @@ def main() -> None:
 
             pool.clear_expired_locks()
 
-            if cmd == 'LOCK':
-                # TODO perguntar ao prof se é preciso validar
-                resp = pool.lock(cargs[0], int(cargs[1]), cargs[3], int(cargs[2]))
-                res.append(resp)
-            elif cmd == 'UNLOCK':
-                resp = pool.unlock(cargs[0], int(cargs[1]), cargs[2])
-                res.append(resp)
-            elif cmd == 'STATUS':
-                resp = pool.status(int(cargs[0]))
-                res.append(resp)
-            elif cmd == 'STATS':
-                if len(cargs) < 1:
-                    raise Exception('STATS subcommand is required')
+            try:
+                if len(cmd) == 0:
+                    raise Exception('UNKNOWN COMMAND')
 
-                scmd, *sargs = cargs
-                resp = pool.stats(scmd, int(sargs[0]) if scmd == 'K' else None)
-                res.append(str(resp))
-            elif cmd == 'PRINT':
-                res.append(str(pool))
+                if cmd == 'LOCK':
+                    if len(cargs) < 4:
+                        raise Exception('LOCK type, resource_id, time_limit, and client_id are required')
+                    elif len(cargs) > 4:
+                        raise Exception('LOCK too many arguments')
+
+                    if cargs[0] not in {'R', 'W'}:
+                        raise Exception('LOCK type must be R or W')
+
+                    if not cargs[1].isdigit():
+                        raise Exception('LOCK resource_id must be a digit')
+
+                    if not cargs[2].isdigit():
+                        raise Exception('LOCK time_limit must be a digit')
+
+                    resp = pool.lock(cargs[0], int(cargs[1]), cargs[3], int(cargs[2]))
+                    res.append(resp)
+                elif cmd == 'UNLOCK':
+                    if len(cargs) < 3:
+                        raise Exception('UNLOCK type, resource_id, and client_id are required')
+                    elif len(cargs) > 3:
+                        raise Exception('UNLOCK too many arguments')
+
+                    if cargs[0] not in {'R', 'W'}:
+                        raise Exception('UNLOCK type must be R or W')
+
+                    if not cargs[1].isdigit():
+                        raise Exception('UNLOCK resource_id must be a digit')
+
+                    resp = pool.unlock(cargs[0], int(cargs[1]), cargs[2])
+                    res.append(resp)
+                elif cmd == 'STATUS':
+                    if len(cargs) < 1:
+                        raise Exception('STATUS resource_id is required')
+
+                    resp = pool.status(int(cargs[0]))
+                    res.append(resp)
+                elif cmd == 'STATS':
+                    if len(cargs) < 1:
+                        raise Exception('STATS subcommand is required')
+                    scmd, *sargs = cargs
+
+                    if scmd == 'K':
+                        if len(sargs) < 1:
+                            raise Exception('STATS resource_id is required')
+                        elif len(sargs) > 1:
+                            raise Exception('STATS too many arguments')
+                    elif scmd == 'N':
+                        if len(cargs) > 1:
+                            raise Exception('STATS too many arguments')
+                    elif scmd == 'D':
+                        if len(cargs) > 1:
+                            raise Exception('STATS too many arguments')
+                    else:
+                        raise Exception('STATS subcommand must be K, N, or D')
+
+                    resp = pool.stats(scmd, int(sargs[0]) if scmd == 'K' else None)
+                    res.append(str(resp))
+                elif cmd == 'PRINT':
+                    res.append(str(pool))
+            except Exception as e:
+                print(e)
+                # traceback.print_exc()
+                continue
 
             parsed_res = ' '.join(res)
             conn_sock.sendall(parsed_res.encode('utf-8'))
             conn_sock.close()
+    except KeyboardInterrupt:
+        print('si señor')
+        exit()
     except Exception as e:
         print('Error:', e)
-        traceback.print_exc()
+        # traceback.print_exc()
 
 
 if __name__ == '__main__':
