@@ -3,6 +3,7 @@
 Aplicações Distribuídas - Projeto 1 - sock_utils.py
 Grupo: 21
 Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 
 import socket as s
