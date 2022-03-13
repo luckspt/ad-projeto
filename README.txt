@@ -1,6 +1,7 @@
 Aplicações Distribuídas - Projeto 1 - README.txt
 Grupo: 21
 Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
 
 Como não estava dito o contrário, consideramos que um cliente pode bloquear o mesmo recurso para leitura várias vezes em simultâneo
 - Assim, quando faz UNLOCK a um recurso (ou a concessão expira), irá remover todas as concessões que detém desse recurso;
