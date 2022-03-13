@@ -29,7 +29,7 @@ class resource_lock:
         self.state = 'UNLOCKED'
         self.write_lock_count = 0
 
-    def lock(self, type: str, client_id: str, time_limit: int):
+    def lock(self, type: str, client_id: str, time_limit: int) -> str:
         """
         Tenta bloquear o recurso pelo cliente client_id, durante time_limit 
         segundos. Retorna OK ou NOK. O bloqueio pode ser de escrita (type=W)
@@ -65,7 +65,7 @@ class resource_lock:
         self.read_lock = []
         self.state = 'UNLOCKED'
 
-    def unlock(self, type: str, client_id: str):
+    def unlock(self, type: str, client_id: str) -> str:
         """
         Liberta o recurso se este está bloqueado pelo cliente client_id.
         Retorna OK ou NOK.O desbloqueio pode ser relacionado a bloqueios 
@@ -98,14 +98,14 @@ class resource_lock:
         # Se o cliente não tiver lock no recurso
         return 'NOK'
 
-    def status(self):
+    def status(self) -> str:
         """
         Obtém o estado do recurso. Retorna LOCKED-W ou LOCKED-R ou UNLOCKED,
         ou DISABLED.
         """
         return self.state
 
-    def stats(self):
+    def stats(self) -> int:
         """
         Retorna o número de bloqueios de escrita feitos neste recurso. 
         """
@@ -120,7 +120,7 @@ class resource_lock:
         self.read_lock = []
         self.state = 'DISABLE'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Representação da classe para a saída standard. A string devolvida por
         esta função é usada, por exemplo, se uma instância da classe for
@@ -171,7 +171,7 @@ class lock_pool:
                 if all(t[1] < now for t in resource.read_lock):
                     resource.release()
 
-    def lock(self, type: str, resource_id: int, client_id: str, time_limit: int):
+    def lock(self, type: str, resource_id: int, client_id: str, time_limit: int) -> str:
         """
         Tenta bloquear (do tipo R ou W) o recurso resource_id pelo cliente client_id, 
         durante time_limit segundos. Retorna OK, NOK ou UNKNOWN RESOURCE.
@@ -185,7 +185,7 @@ class lock_pool:
 
         return resource.lock(type, client_id, time_limit)
 
-    def unlock(self, type: str, resource_id: int, client_id: str):
+    def unlock(self, type: str, resource_id: int, client_id: str) -> str:
         """
         Liberta o bloqueio (do tipo R ou W) sobre o recurso resource_id pelo cliente 
         client_id. Retorna OK, NOK ou UNKNOWN RESOURCE.
@@ -201,7 +201,7 @@ class lock_pool:
 
         return res
 
-    def status(self, resource_id: int):
+    def status(self, resource_id: int) -> str:
         """
         Obtém o estado de um recurso. Retorna LOCKED, UNLOCKED,
         DISABLED ou UNKNOWN RESOURCE.
@@ -234,7 +234,7 @@ class lock_pool:
         else:
             return 'UNKNOWN OPTION'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Representação da classe para a saída standard. A string devolvida por
         esta função é usada, por exemplo, se uma instância da classe for
@@ -246,6 +246,7 @@ class lock_pool:
 
 
 ###############################################################################
+
 
 # código do programa principal
 def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
@@ -358,7 +359,6 @@ def main() -> None:
             conn_sock.sendall(parsed_res.encode('utf-8'))
             conn_sock.close()
     except KeyboardInterrupt:
-        print('si señor')
         exit()
     except Exception as e:
         print('Error:', e)

@@ -133,7 +133,6 @@ def main() -> None:
                 continue
 
     except KeyboardInterrupt:
-        print('si señor')
         exit()
     except Exception as e:
         print('Error:', e)

@@ -12,3 +12,5 @@ Uma vez que o comando STATS N está descrito que a resposta do servidor é o "n�
 UNLOCKED", escolhemos implementar desta forma, ao contrário do que a docstring do método resource_pool.stats() diz "se option for N, retorna <número de recursos bloqueados atualmente>".
 
 Implementámos também a sintaxe dos comandos LOCK e UNLOCK com espaço, como descrito na Tabela 1, ao invés de com hífen, como está nos exemplos da Tabela 3.
+
+Quanto aos recursos, decidimos começar o seu identificador por 1 dadas as condições de "recurso inexistente" referidas na especificação dos comandos LOCK e UNLOCK ("um número de recurso menor que 1 ou maior que N"), ao invés de começar por 0 como é visível nos exemplos
