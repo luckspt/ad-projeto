@@ -254,7 +254,7 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     Define o parser de argumentos.
     :return: Dict com valores dos argumentos escolhidos pelo utilizador.
     """
-    parser = ArgumentParser(description='')
+    parser = ArgumentParser(description='Servidor de recursos')
 
     parser.add_argument("address", help="IP ou Hostname onde o Servidor irá fornecer os recursos")
 
