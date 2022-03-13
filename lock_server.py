@@ -29,7 +29,6 @@ class resource_lock:
         self.state = 'UNLOCKED'
         self.write_lock_count = 0
 
-    # ainda nao esta ok LISTA
     def lock(self, type: str, client_id: str, time_limit: int):
         """
         Tenta bloquear o recurso pelo cliente client_id, durante time_limit 
@@ -117,7 +116,8 @@ class resource_lock:
         Coloca o recurso como desabilitado incondicionalmente, alterando os 
         valores associados à sua disponibilidade.
         """
-        self.release()  # TODO necessário?
+        self.write_lock = (None, 0)
+        self.read_lock = []
         self.state = 'DISABLE'
 
     def __repr__(self):
@@ -127,13 +127,9 @@ class resource_lock:
         passada à função print ou str.
         """
         output = f'{self.state} {self.write_lock_count}'
-        # int maior =
-        # Se o recurso está bloqueado para a escrita:
-        # R <num do recurso> LOCKED-W <vezes bloqueios de escrita> <id do cliente> <deadline do bloqueio de escrita>
+
         if self.state == 'LOCKED-W':
             output += f' {self.write_lock[0]} {self.write_lock[1]}'
-        # Se o recurso está bloqueado para a leitura: R <num do recurso> LOCKED-R <vezes bloqueios de escrita> <num
-        # bloqueios de leitura atuais> <último deadline dos bloqueios de leitura>
         elif self.state == 'LOCKED-R':
             qtd_clientes = len(set(map(lambda c: c[0], self.read_lock)))
             max_concessao = reduce(lambda acc, c: acc if acc > c[1] else c[1]
@@ -172,7 +168,6 @@ class lock_pool:
                     else:
                         resource.release()
             elif resource.status() == 'LOCKED-R':
-                # TODO confirmar
                 if all(t[1] < now for t in resource.read_lock):
                     resource.release()
 
@@ -357,7 +352,6 @@ def main() -> None:
                     res.append(str(pool))
             except Exception as e:
                 print(e)
-                # traceback.print_exc()
                 continue
 
             parsed_res = ' '.join(res)
@@ -368,7 +362,6 @@ def main() -> None:
         exit()
     except Exception as e:
         print('Error:', e)
-        # traceback.print_exc()
 
 
 if __name__ == '__main__':

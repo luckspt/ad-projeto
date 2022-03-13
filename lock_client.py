@@ -119,18 +119,19 @@ def main() -> None:
                         raise Exception('PRINT too many arguments')
                 else:
                     raise Exception('UNKNOWN COMMAND')
+            
+                cmd_parsed = ' '.join([cmd, *cargs])
+
+                client.connect()
+                res = client.send_receive(cmd_parsed)
+                client.close()
+
+                print(res)
             except Exception as e:
                 print(e)
                 # traceback.print_exc()
                 continue
 
-            cmd_parsed = ' '.join([cmd, *cargs])
-
-            client.connect()
-            res = client.send_receive(cmd_parsed)
-            client.close()
-
-            print(res)
     except KeyboardInterrupt:
         print('si señor')
         exit()

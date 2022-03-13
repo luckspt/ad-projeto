@@ -39,7 +39,6 @@ class server_connection:
         """
         self.socket.sendall(data.encode('utf-8'))
 
-        # TODO max length é 1024?
         msg = sock_utils.receive_all(self.socket, 1024)
         return msg.decode('utf-8')
 
