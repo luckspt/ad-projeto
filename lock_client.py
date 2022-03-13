@@ -4,6 +4,7 @@
 Aplicações Distribuídas - Projeto 1 - lock_client.py
 Grupo: 21
 Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 # Zona para fazer imports
 from argparse import ArgumentParser
