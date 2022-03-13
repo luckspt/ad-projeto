@@ -6,7 +6,6 @@ Grupo: 21
 Números de aluno: 56895, 56926
 """
 # Zona para fazer imports
-import traceback
 from argparse import ArgumentParser
 from time import sleep
 from typing import Dict, Union, Tuple
