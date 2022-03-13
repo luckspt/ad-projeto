@@ -7,7 +7,6 @@ Números de aluno: 56895, 56926
 """
 
 # Zona para fazer importação
-import traceback
 from argparse import ArgumentParser
 from time import time
 from functools import reduce
