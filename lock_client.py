@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 1 - lock_client.py
+Aplicações Distribuídas - Projeto 2 - lock_client.py
 Grupo: 21
 Números de aluno: 56895, 56926
 """
@@ -23,7 +23,7 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     """
     parser = ArgumentParser(description='')
 
-    parser.add_argument("client_id", help="ID único do Cliente")
+    parser.add_argument("client_id", help="ID único do Cliente", type=int)
 
     parser.add_argument("address", help="IP ou Hostname do Servidor que fornece os recursos")
 

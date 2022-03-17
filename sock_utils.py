@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 1 - sock_utils.py
+Aplicações Distribuídas - Projeto 2 - sock_utils.py
 Grupo: 21
 Números de aluno: 56895, 56926
 """

@@ -1,4 +1,4 @@
-Aplicações Distribuídas - Projeto 1 - README.txt
+Aplicações Distribuídas - Projeto 2 - README.txt
 Grupo: 21
 Números de aluno: 56895, 56926
 
