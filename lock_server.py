@@ -4,10 +4,10 @@
 Aplicações Distribuídas - Projeto 2 - lock_server.py
 Grupo: 21
 Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 
 # Zona para fazer importação
-import traceback
 from argparse import ArgumentParser
 from typing import Dict, Union, Tuple
 from lock_pool import lock_pool
@@ -24,7 +24,7 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     Define o parser de argumentos.
     :return: Dict com valores dos argumentos escolhidos pelo utilizador.
     """
-    parser = ArgumentParser(description='')
+    parser = ArgumentParser(description='Servidor de recursos')
 
     parser.add_argument("address", help="IP ou Hostname onde o Servidor irá fornecer os recursos")
 

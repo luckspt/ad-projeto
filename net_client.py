@@ -3,6 +3,7 @@
 Aplicações Distribuídas - Projeto 2 - net_client.py
 Grupo: 21
 Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 
 # zona para fazer importação
