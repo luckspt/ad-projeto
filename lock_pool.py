@@ -206,7 +206,8 @@ class lock_pool:
 
         return resource.status()
 
-    def stats(self, option: str, resource_id: int) -> Union[int, str, None]:
+    # TODO perguntar se fica assim ou se mudamos para métodos diferentes
+    def stats(self, option: str, resource_id: Union[int, None]) -> Union[int, str, None]:
         """
         Obtém o estado do serviço de gestão de bloqueios. Se option for K, retorna <número de
         bloqueios feitos no recurso resource_id> ou None. Se option for N, retorna

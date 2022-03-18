@@ -7,6 +7,10 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 
 # zona para fazer importação
+import pickle
+import struct
+from typing import Any
+
 import sock_utils
 import socket as s
 
@@ -33,15 +37,28 @@ class server_connection:
         """
         self.socket = sock_utils.create_tcp_client_socket(self.address, self.port)
 
-    def send_receive(self, data: str):
+    def send_receive(self, data: Any):
         """
         Envia os dados contidos em data para a socket da ligação, e retorna
         a resposta recebida pela mesma socket.
         """
-        self.socket.sendall(data.encode('utf-8'))
+        # Serialize
+        msg_bytes = pickle.dumps(data, -1)
+        size_bytes = struct.pack('i', len(msg_bytes))
 
-        msg = sock_utils.receive_all(self.socket, 1024)
-        return msg.decode('utf-8')
+        # Send
+        self.socket.sendall(size_bytes)
+        self.socket.sendall(msg_bytes)
+
+        # Receive
+        res_size_bytes = sock_utils.receive_all(self.socket, 4)
+        size = struct.unpack('i', res_size_bytes)[0]
+
+        # Deserialize
+        res_bytes = sock_utils.receive_all(self.socket, size)
+        res = pickle.loads(res_bytes)
+
+        return res
 
     def close(self):
         """

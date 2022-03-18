@@ -10,7 +10,7 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 from argparse import ArgumentParser
 from time import sleep
 from typing import Dict, Union, Tuple
-import net_client
+from lock_stub import lock_stub
 
 
 # Programa principal
@@ -37,13 +37,14 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
 def main() -> None:
     try:
         args = parse()
+        stub = lock_stub(args['address'], args['port'])
 
-        client = net_client.server_connection(args['address'], args['port'])
         while True:
             cmd = input('comando > ')
             cmd, *cargs = cmd.split()
 
             try:
+                res = None
                 if len(cmd) == 0:
                     raise Exception('UNKNOWN COMMAND')
 
@@ -79,7 +80,7 @@ def main() -> None:
                     if not cargs[2].isdigit():
                         raise Exception('LOCK time_limit must be a digit')
 
-                    cargs.append(args['client_id'])
+                    res = stub.lock(cargs[0], cargs[1], cargs[2], args['client_id'])
                 elif cmd == 'UNLOCK':
                     if len(cargs) < 2:
                         raise Exception('UNLOCK type and resource_id are required')
@@ -92,13 +93,15 @@ def main() -> None:
                     if not cargs[1].isdigit():
                         raise Exception('UNLOCK resource_id must be a digit')
 
-                    cargs.append(args['client_id'])
+                    res = stub.unlock(cargs[0], cargs[1], args['client_id'])
                 elif cmd == 'STATUS':
                     if len(cargs) < 1:
                         raise Exception('STATUS resource_id is required')
+                    res = stub.status(cargs[0])
                 elif cmd == 'STATS':
                     if len(cargs) < 1:
                         raise Exception('STATS subcommand is required')
+
                     scmd, *sargs = cargs
 
                     if scmd == 'K':
@@ -106,27 +109,30 @@ def main() -> None:
                             raise Exception('STATS resource_id is required')
                         elif len(sargs) > 1:
                             raise Exception('STATS too many arguments')
+
+                        res = stub.stats_write_count(sargs[0])
                     elif scmd == 'N':
                         if len(sargs) > 0:
                             raise Exception('STATS too many arguments')
+
+                        res = stub.stats_unlocked()
                     elif scmd == 'D':
                         if len(sargs) > 0:
                             raise Exception('STATS too many arguments')
+
+                        res = stub.stats_disabled()
                     else:
                         raise Exception('STATS subcommand must be K, N, or D')
                 elif cmd == 'PRINT':
                     if len(cargs) > 0:
                         raise Exception('PRINT too many arguments')
+
+                    res = stub.print()
                 else:
                     raise Exception('UNKNOWN COMMAND')
-            
-                cmd_parsed = ' '.join([cmd, *cargs])
 
-                client.connect()
-                res = client.send_receive(cmd_parsed)
-                client.close()
 
-                print(res)
+                print(res[1])
             except Exception as e:
                 print(e)
                 continue
