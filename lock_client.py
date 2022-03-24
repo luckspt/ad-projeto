@@ -38,13 +38,14 @@ def main() -> None:
     try:
         args = parse()
         stub = lock_stub(args['address'], args['port'])
+        stub.connect()
 
         while True:
-            cmd = input('comando > ')
-            cmd, *cargs = cmd.split()
+            cmdinp = input('comando > ')
+
+            cmd, *cargs = cmdinp.split()
 
             try:
-                res = None
                 if len(cmd) == 0:
                     raise Exception('UNKNOWN COMMAND')
 
@@ -65,7 +66,8 @@ def main() -> None:
                         continue
                     except:
                         raise Exception('SLEEP time_limit must be a float')
-                elif cmd == 'LOCK':
+
+                if cmd == 'LOCK':
                     if len(cargs) < 3:
                         raise Exception('LOCK type, resource_id, and time_limit are required')
                     elif len(cargs) > 3:
@@ -80,7 +82,7 @@ def main() -> None:
                     if not cargs[2].isdigit():
                         raise Exception('LOCK time_limit must be a digit')
 
-                    res = stub.lock(cargs[0], cargs[1], cargs[2], args['client_id'])
+                    res = stub.lock(cargs[0], int(cargs[1]), int(cargs[2]), args['client_id'])
                 elif cmd == 'UNLOCK':
                     if len(cargs) < 2:
                         raise Exception('UNLOCK type and resource_id are required')
@@ -93,11 +95,15 @@ def main() -> None:
                     if not cargs[1].isdigit():
                         raise Exception('UNLOCK resource_id must be a digit')
 
-                    res = stub.unlock(cargs[0], cargs[1], args['client_id'])
+                    res = stub.unlock(cargs[0], int(cargs[1]), args['client_id'])
                 elif cmd == 'STATUS':
                     if len(cargs) < 1:
                         raise Exception('STATUS resource_id is required')
-                    res = stub.status(cargs[0])
+
+                    if not cargs[0].isdigit():
+                        raise Exception('STATUS resource_id must be a digit')
+
+                    res = stub.status(int(cargs[0]))
                 elif cmd == 'STATS':
                     if len(cargs) < 1:
                         raise Exception('STATS subcommand is required')
@@ -110,7 +116,10 @@ def main() -> None:
                         elif len(sargs) > 1:
                             raise Exception('STATS too many arguments')
 
-                        res = stub.stats_write_count(sargs[0])
+                        if not sargs[0].isdigit():
+                            raise Exception('STATS resource_id must be a digit')
+
+                        res = stub.stats_write_count(int(sargs[0]))
                     elif scmd == 'N':
                         if len(sargs) > 0:
                             raise Exception('STATS too many arguments')
@@ -131,12 +140,16 @@ def main() -> None:
                 else:
                     raise Exception('UNKNOWN COMMAND')
 
-
-                print(res[1])
+                print(f'------\n  Pedido: {cmdinp}')
+                print(f'Resposta: {", ".join(str(el) for el in res)}\n------')
             except Exception as e:
                 print(e)
+                # traceback.print_exc()
                 continue
+            finally:
+                pass
 
+        stub.disconnect()
     except KeyboardInterrupt:
         exit()
     except Exception as e:

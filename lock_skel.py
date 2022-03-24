@@ -19,15 +19,13 @@ class lock_skel:
         # recebe bytes e desserializa o pedido
         pedido = self.bytesToList(msg_bytes)
 
-        cmd, *cargs = pedido
-
-        res = [pedido[0] + 1]
-
-        self.lp.clear_expired_locks()
+        print(f'------\n  Pedido: {", ".join(str(el) for el in pedido)}')
         try:
-            if len(cmd) == 0:
-                raise Exception('UNKNOWN COMMAND')
+            cmd, *cargs = pedido
 
+            res = [pedido[0] + 1]
+
+            self.lp.clear_expired_locks()
             if cmd == 10:
                 if len(cargs) < 4:
                     raise Exception('LOCK type, resource_id, time_limit, and client_id are required')
@@ -37,14 +35,14 @@ class lock_skel:
                 if cargs[0] not in {'R', 'W'}:
                     raise Exception('LOCK type must be R or W')
 
-                if not cargs[1].isdigit():
-                    raise Exception('LOCK resource_id must be a digit')
+                if not isinstance(cargs[1], int):
+                    raise Exception('LOCK resource_id must be an int')
 
-                if not cargs[2].isdigit():
-                    raise Exception('LOCK time_limit must be a digit')
+                if not isinstance(cargs[2], int):
+                    raise Exception('LOCK time_limit must be an int')
 
-                if not cargs[3].isdigit():
-                    raise Exception('LOCK client_id must be a digit')
+                if not isinstance(cargs[3], int):
+                    raise Exception('LOCK client_id must be an int')
 
                 resp = self.lp.lock(cargs[0], cargs[1], cargs[3], cargs[2])
                 res.append(resp)
@@ -57,11 +55,11 @@ class lock_skel:
                 if cargs[0] not in {'R', 'W'}:
                     raise Exception('UNLOCK type must be R or W')
 
-                if not cargs[1].isdigit():
-                    raise Exception('UNLOCK resource_id must be a digit')
+                if not isinstance(cargs[1], int):
+                    raise Exception('UNLOCK resource_id must be an int')
 
-                if not cargs[2].isdigit():
-                    raise Exception('UNLOCK client_id must be a digit')
+                if not isinstance(cargs[2], int):
+                    raise Exception('UNLOCK client_id must be an int')
 
                 resp = self.lp.unlock(cargs[0], cargs[1], cargs[2])
                 res.append(resp)
@@ -71,7 +69,7 @@ class lock_skel:
 
                 resp = self.lp.status(cargs[0])
                 res.append(resp)
-            if cmd == 40:
+            elif cmd == 40:
                 if len(cargs) < 1:
                     raise Exception('STATS resource_id is required')
                 elif len(cargs) > 1:
@@ -93,9 +91,12 @@ class lock_skel:
                 res.append(resp)
             elif cmd == 70:
                 res.append(str(self.lp))
+            else:
+                raise Exception('UNKNOWN COMMAND')
         except Exception as e:
             res.append(str(e))
 
+        print(f'Resposta: {", ".join(str(el) for el in res)}\n------')
         return self.listToBytes(res)
 
     def bytesToList(self, msg_bytes):

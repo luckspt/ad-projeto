@@ -5,7 +5,7 @@ Aplicações Distribuídas - Projeto 2 - lock_pool.py
 Grupo: 21
 Números de aluno: 56895, 56926
 """
-from datetime import time
+from time import time
 from functools import reduce
 from typing import Union
 
@@ -32,7 +32,7 @@ class resource_lock:
 
         if type == 'W':
             if self.state == 'LOCKED-W' or self.state == 'LOCKED-R':
-                return None
+                return False
             else:
                 self.state = 'LOCKED-W'
                 deadline = time() + time_limit
@@ -79,8 +79,8 @@ class resource_lock:
                 ok = False
                 for i, concessao in enumerate(self.read_lock):
                     if concessao[0] == client_id:
-                        ok = True  # Ups! não estava na entrega 1
                         self.read_lock.pop(i)
+                        ok = True  # Ups! não estava na entrega 1
 
                 if len(self.read_lock) == 0:
                     self.state = 'UNLOCKED'
@@ -111,7 +111,7 @@ class resource_lock:
         """
         self.write_lock = (None, 0)
         self.read_lock = []
-        self.state = 'DISABLE'
+        self.state = 'DISABLED'
 
     def __repr__(self) -> str:
         """
@@ -206,7 +206,6 @@ class lock_pool:
 
         return resource.status()
 
-    # TODO perguntar se fica assim ou se mudamos para métodos diferentes
     def stats(self, option: str, resource_id: Union[int, None]) -> Union[int, str, None]:
         """
         Obtém o estado do serviço de gestão de bloqueios. Se option for K, retorna <número de

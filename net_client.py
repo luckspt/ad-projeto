@@ -51,12 +51,12 @@ class server_connection:
         self.socket.sendall(msg_bytes)
 
         # Receive
-        res_size_bytes = sock_utils.receive_all(self.socket, 4)
-        size = struct.unpack('i', res_size_bytes)[0]
+        req_size_bytes = sock_utils.receive_all(self.socket, 4)
+        size = struct.unpack('i', req_size_bytes)[0]
 
         # Deserialize
-        res_bytes = sock_utils.receive_all(self.socket, size)
-        res = pickle.loads(res_bytes)
+        req_bytes = sock_utils.receive_all(self.socket, size)
+        res = pickle.loads(req_bytes)
 
         return res
 

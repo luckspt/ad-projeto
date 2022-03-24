@@ -30,9 +30,7 @@ class lock_stub:
             else:
                 parsed.append(data)
 
-        self.connect()
         res = self.client.send_receive(parsed)
-        self.disconnect()
         return res
 
     def lock(self, type: str, resource_id: int, time_limit: int, client_id: int):

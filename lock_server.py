@@ -8,9 +8,12 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 
 # Zona para fazer importação
+import pickle
+import struct
 from argparse import ArgumentParser
 from typing import Dict, Union, Tuple
-from lock_pool import lock_pool
+from lock_skel import lock_skel
+import select as sel
 import sock_utils
 
 ###############################################################################
@@ -42,20 +45,36 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
 def main() -> None:
     try:
         args = parse()
+        skel = lock_skel(args['n'], args['k'])
 
-        socket = sock_utils.create_tcp_server_socket(args['address'], args['port'], 1)
+        listen_socket = sock_utils.create_tcp_server_socket(args['address'], args['port'], 1)
+
+        socket_list = [listen_socket]
+
         while True:
-            (conn_sock, (addr, port)) = socket.accept()
+            R, W, X = sel.select(socket_list, [], [])
+            for sckt in R:
+                if sckt is listen_socket:
+                    conn_sock, addr = sckt.accept()
+                    addr, port = conn_sock.getpeername()
+                    print(f'\n------------------------\nLigado a {addr} no porto {port}')
+                    socket_list.append(conn_sock)
+                else:
+                    res_size_bytes = sock_utils.receive_all(sckt, 4)
 
-            print(f'Ligado a {addr} no porto {port}')
+                    if len(res_size_bytes):
+                        size = struct.unpack('i', res_size_bytes)[0]
+                        req_bytes = sock_utils.receive_all(sckt, size)
 
-            msg = conn_sock.recv(1024)
+                        resp = skel.processMessage(req_bytes)
 
-            res = [10, 'blabla']
-
-            parsed_res = ' '.join(res)
-            conn_sock.sendall(parsed_res.encode('utf-8'))
-            conn_sock.close()
+                        size_bytes = struct.pack('i', len(resp))
+                        sckt.sendall(size_bytes)
+                        sckt.sendall(resp)
+                    else:  # isto pq o TCP tem o protocolo de finalização, e o select desbloqueia com uma mensagem vazia
+                        sckt.close()
+                        socket_list.remove(sckt)
+                        print('Cliente fechou a ligação\n------------------------\n')
     except KeyboardInterrupt:
         exit()
     except Exception as e:
