@@ -44,6 +44,10 @@ def main() -> None:
         while True:
             cmdinp = input('comando > ')
 
+            # Empty line
+            if not cmdinp:
+                continue
+
             cmd, *cargs = cmdinp.split()
 
             try:
@@ -158,7 +162,9 @@ def main() -> None:
                 print(e)
 
     except KeyboardInterrupt:
-        exit()
+        pass
+    except EOFError:
+        pass
     except ConnectionRefusedError:
         print('Server connection refused, check address and port')
     except Exception as e:
