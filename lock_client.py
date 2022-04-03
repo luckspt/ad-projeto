@@ -67,10 +67,12 @@ def main() -> None:
                         continue
                     except ValueError:
                         raise Exception('SLEEP time_limit must be a float')
+                    except KeyboardInterrupt:
+                        continue
                     except:
                         raise Exception('SLEEP could not sleep :(')
 
-                if cmd == 'LOCK':
+                elif cmd == 'LOCK':
                     if len(cargs) < 3:
                         raise Exception('LOCK type, resource_id, and time_limit are required')
                     elif len(cargs) > 3:
@@ -155,14 +157,14 @@ def main() -> None:
             except Exception as e:
                 print(e)
 
-        stub.disconnect()
     except KeyboardInterrupt:
         exit()
     except ConnectionRefusedError:
         print('Server connection refused, check address and port')
     except Exception as e:
         print('Error:', e)
-
+    finally:
+        stub.disconnect()
 
 if __name__ == '__main__':
     main()

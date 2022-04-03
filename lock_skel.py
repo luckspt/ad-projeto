@@ -89,7 +89,7 @@ class lock_skel:
                 elif len(cargs) > 1:
                     raise Exception('STATS too many arguments')
 
-                if not isinstance(cargs[1], int) or cargs[1] < 1:
+                if not isinstance(cargs[0], int) or cargs[0] < 1:
                     raise Exception('STATS resource_id must be an int greater or equal to 1')
 
                 resp = self.lp.stats('K', cargs[0])
