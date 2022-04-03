@@ -9,8 +9,7 @@ Como não estava dito o contrário, consideramos que um cliente pode bloquear o 
 
 Optámos por fazer a verificação dos comandos do lado do cliente para minimizar os pedidos icorretos, e fazê-lo também do lado do servidor como garantia.
 
-Uma vez que o comando STATS N está descrito que a resposta do servidor é o "número de recursos
-UNLOCKED", escolhemos implementar desta forma, ao contrário do que a docstring do método resource_pool.stats() diz "se option for N, retorna <número de recursos bloqueados atualmente>".
+Uma vez que o comando STATS N está descrito que a resposta do servidor é o "número de recursos UNLOCKED", escolhemos implementar desta forma, ao contrário do que a docstring do método resource_pool.stats() diz "se option for N, retorna <número de recursos bloqueados atualmente>".
 
 Implementámos também a sintaxe dos comandos LOCK e UNLOCK com espaço, como descrito na Tabela 1, ao invés de com hífen, como está nos exemplos da Tabela 3.
 

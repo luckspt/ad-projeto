@@ -212,7 +212,7 @@ class lock_pool:
         """
         Obtém o estado do serviço de gestão de bloqueios. Se option for K, retorna <número de
         bloqueios feitos no recurso resource_id> ou None. Se option for N, retorna
-        <número de recursos bloqueados atualmente>. Se option for D, retorna
+        <número de recursos desbloqueados atualmente>. Se option for D, retorna
         <número de recursos desabilitados>
         """
         if option == 'K':
