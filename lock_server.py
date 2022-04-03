@@ -42,6 +42,9 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
 
 
 def main() -> None:
+    """
+    Programa principal
+    """
     try:
         args = parse()
         skel = lock_skel(args['n'], args['k'])

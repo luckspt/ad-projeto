@@ -36,6 +36,9 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
 
 
 def main() -> None:
+    """
+    Programa principal
+    """
     try:
         args = parse()
         stub = lock_stub(args['address'], args['port'])

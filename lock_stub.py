@@ -37,7 +37,7 @@ class lock_stub:
 
     def lock(self, type: str, resource_id: int, time_limit: int, client_id: int) -> List[Union[int, bool, None]]:
         """
-        Prende um recurso no servidor.
+        Bloqueia um recurso no servidor.
         """
         return self.client.send_receive([10, type, resource_id, time_limit, client_id])
 
@@ -55,7 +55,7 @@ class lock_stub:
 
     def stats_write_count(self, resource_id: int) -> List[Union[int, str, None]]:
         """
-        Obtém quantas vezes um recurso foi preso.
+        Obtém quantas vezes um recurso foi bloqueado.
         """
         return self.client.send_receive([40, resource_id])
 
