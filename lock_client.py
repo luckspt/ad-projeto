@@ -6,6 +6,7 @@ Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
 """
+
 # Zona para fazer imports
 from argparse import ArgumentParser
 from time import sleep
@@ -59,13 +60,15 @@ def main() -> None:
 
                     try:
                         time_limit = float(cargs[0])
-                        if time_limit <= 0:
-                            raise Exception('SLEEP time_limit must be positive')
+                        if time_limit < 0:
+                            raise Exception('SLEEP time_limit must be positive float')
 
                         sleep(time_limit)
                         continue
-                    except:
+                    except ValueError:
                         raise Exception('SLEEP time_limit must be a float')
+                    except:
+                        raise Exception('SLEEP could not sleep :(')
 
                 if cmd == 'LOCK':
                     if len(cargs) < 3:
@@ -76,11 +79,11 @@ def main() -> None:
                     if cargs[0] not in {'R', 'W'}:
                         raise Exception('LOCK type must be R or W')
 
-                    if not cargs[1].isdigit():
-                        raise Exception('LOCK resource_id must be a digit')
+                    if not cargs[1].isdigit() or int(cargs[1]) < 1:
+                        raise Exception('LOCK resource_id must be a digit greater or equal to 1')
 
-                    if not cargs[2].isdigit():
-                        raise Exception('LOCK time_limit must be a digit')
+                    if not cargs[2].isdigit() or int(cargs[2]) < 0:
+                        raise Exception('LOCK time_limit must be a positive digit')
 
                     res = stub.lock(cargs[0], int(cargs[1]), int(cargs[2]), args['client_id'])
                 elif cmd == 'UNLOCK':
@@ -92,16 +95,18 @@ def main() -> None:
                     if cargs[0] not in {'R', 'W'}:
                         raise Exception('UNLOCK type must be R or W')
 
-                    if not cargs[1].isdigit():
-                        raise Exception('UNLOCK resource_id must be a digit')
+                    if not cargs[1].isdigit() or int(cargs[1]) < 1:
+                        raise Exception('UNLOCK resource_id must be a digit greater or equal to 1')
 
                     res = stub.unlock(cargs[0], int(cargs[1]), args['client_id'])
                 elif cmd == 'STATUS':
                     if len(cargs) < 1:
                         raise Exception('STATUS resource_id is required')
+                    elif len(cargs) > 1:
+                        raise Exception('STATUS too many arguments')
 
-                    if not cargs[0].isdigit():
-                        raise Exception('STATUS resource_id must be a digit')
+                    if not cargs[0].isdigit() or int(cargs[0]) < 1:
+                        raise Exception('STATUS resource_id must be a digit greater or equal to 1')
 
                     res = stub.status(int(cargs[0]))
                 elif cmd == 'STATS':
@@ -116,8 +121,8 @@ def main() -> None:
                         elif len(sargs) > 1:
                             raise Exception('STATS too many arguments')
 
-                        if not sargs[0].isdigit():
-                            raise Exception('STATS resource_id must be a digit')
+                        if not sargs[0].isdigit() or int(sargs[0]) < 1:
+                            raise Exception('STATS resource_id must be a digit greater or equal to 1')
 
                         res = stub.stats_write_count(int(sargs[0]))
                     elif scmd == 'N':
@@ -140,18 +145,21 @@ def main() -> None:
                 else:
                     raise Exception('UNKNOWN COMMAND')
 
-                print(f'------\n  Pedido: {cmdinp}')
-                print(f'Resposta: {", ".join(str(el) for el in res)}\n------')
+                print(f'------\nPedido:\n{cmdinp}')
+                print(f'Resposta:\n{", ".join(str(el) for el in res)}\n------')
+            except ValueError:
+                print('Could not convert a type, read the manual')
+            except BrokenPipeError:
+                print('Server connection lost, run the script again')
+                break
             except Exception as e:
                 print(e)
-                # traceback.print_exc()
-                continue
-            finally:
-                pass
 
         stub.disconnect()
     except KeyboardInterrupt:
         exit()
+    except ConnectionRefusedError:
+        print('Server connection refused, check address and port')
     except Exception as e:
         print('Error:', e)
 

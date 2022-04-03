@@ -8,7 +8,6 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 
 # Zona para fazer importação
-import pickle
 import struct
 from argparse import ArgumentParser
 from typing import Dict, Union, Tuple

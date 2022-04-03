@@ -11,6 +11,10 @@ from typing import Union
 
 
 def create_tcp_server_socket(address, port, queue_size):
+    """
+    Cria uma socket de servidor TCP onde poderão posteriormente ser
+    aceites ligações de clientes.
+    """
     sock = s.socket(s.AF_INET, s.SOCK_STREAM)
     sock.setsockopt(s.SOL_SOCKET, s.SO_REUSEADDR, 1)
     sock.bind((address, port))
@@ -19,12 +23,18 @@ def create_tcp_server_socket(address, port, queue_size):
 
 
 def create_tcp_client_socket(address, port):
+    """
+    Criar uma socket de ligação para o cliente comunicar com um servidor.
+    """
     sock = s.socket(s.AF_INET, s.SOCK_STREAM)
     sock.connect((address, port))
     return sock
 
 
 def receive_all(socket: s.socket, length: int) -> Union[bytearray, None]:
+    """
+    Recebe exatamente lenght bytes através da socket. 
+    """
     data = bytearray()
     try:
         while len(data) < length:

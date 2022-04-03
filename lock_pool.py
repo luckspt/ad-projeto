@@ -4,7 +4,9 @@
 Aplicações Distribuídas - Projeto 2 - lock_pool.py
 Grupo: 21
 Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
 """
+
 from time import time
 from functools import reduce
 from typing import Union

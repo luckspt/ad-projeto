@@ -37,7 +37,7 @@ class server_connection:
         """
         self.socket = sock_utils.create_tcp_client_socket(self.address, self.port)
 
-    def send_receive(self, data: Any):
+    def send_receive(self, data: Any) -> Any:
         """
         Envia os dados contidos em data para a socket da ligação, e retorna
         a resposta recebida pela mesma socket.
