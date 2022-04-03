@@ -71,7 +71,7 @@ class lock_stub:
         """
         return self.client.send_receive([60])
 
-    def print(self) -> List[int, str]:
+    def print(self) -> List[Union[int, str]]:
         """
         Obtém a lista de recursos com os seus estados e outras informações.
         """
