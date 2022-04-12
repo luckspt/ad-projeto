@@ -10,7 +10,7 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 # Zona para fazer imports
 from argparse import ArgumentParser
 from time import sleep
-from typing import Dict, Union, Tuple
+from typing import Any, Dict, Union, Tuple
 import requests
 
 
@@ -44,25 +44,25 @@ class Api():
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url
 
-    def parse_response(res: requests.Response):
+    def parse_response(res: requests.Response) -> Union[Dict[str, Any], None]:
         try:
             return res.json()
         except requests.exceptions.JSONDecodeError:
             return None
 
-    def get(self, path: str, query_params: Dict[str, str]):
+    def get(self, path: str, query_params: Dict[str, str]) -> Union[Dict[str, Any], None]:
         res = requests.get(f'{self.base_url}{path}', params=query_params)
         return self.parse_response(res)
 
-    def post(self, path: str, body: Dict[str, str]):
+    def post(self, path: str, body: Dict[str, str]) -> Union[Dict[str, Any], None]:
         res = requests.post(f'{self.base_url}{path}', data=body)
         return self.parse_response(res)
 
-    def put(self, path: str, body: Dict[str, str]):
+    def put(self, path: str, body: Dict[str, str]) -> Union[Dict[str, Any], None]:
         res = requests.put(f'{self.base_url}{path}', data=body)
         return self.parse_response(res)
 
-    def delete(self, path: str):
+    def delete(self, path: str) -> Union[Dict[str, Any], None]:
         res = requests.put(f'{self.base_url}{path}')
         return self.parse_response(res)
 
