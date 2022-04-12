@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 2 - lock_client.py
+Aplicações Distribuídas - Projeto 3 - lock_client.py
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
@@ -12,10 +12,10 @@ from argparse import ArgumentParser
 from time import sleep
 from typing import Dict, Union, Tuple
 from lock_stub import lock_stub
+import requests
 
 
 # Programa principal
-
 
 def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     """
@@ -66,6 +66,28 @@ def main() -> None:
                         raise Exception('SLEEP too many arguments')
 
                     try:
+                        if cmd == 'CREATE':
+                            if cargs[0] == 'UTILIZADOR':
+                                dados = {'nome': cargs[1], 'senha' : cargs[2]}
+                                r = requests.put('http://localhost:5000/utilizadores', json = dados)
+                                print(r.headers) #falta acabar isto
+                                #print (r.status_code)
+                                #print (r.content.decode())
+                                #print (r.headers)
+                                #PRINT("Novo utilizador criado")
+                            
+                            elif cargs[0] == 'ARTISTA':
+                                dados = {'id': cargs[1]}
+                                r = requests.put('http://localhost:5000/artistas', json = dados)
+                            elif cargs[0] == 'MUSICA':
+                                dados = {'id': cargs[1]}
+                                r = requests.put('http://localhost:5000/musicas', json = dados)
+                            else:
+                                dados = {'id_musica': cargs[1], 'id_user' : cargs[2], 'avaliacao': cargs[3]}
+                                r = requests.put('http://localhost:5000/avaliacoes', json = dados)
+
+
+                    ##PROJETO ANTERIOR
                         time_limit = float(cargs[0])
                         if time_limit < 0:
                             raise Exception('SLEEP time_limit must be positive float')

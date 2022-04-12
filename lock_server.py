@@ -1,24 +1,38 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 2 - lock_server.py
+Aplicações Distribuídas - Projeto 3 - lock_server.py
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
 """
 
 # Zona para fazer importação
-import struct
+from crypt import methods
+from os.path import isfile
+import sqlite3
+from flask import Flask, g, request
 from argparse import ArgumentParser
 from typing import Dict, Union, Tuple
-from lock_skel import lock_skel
-import select as sel
-import sock_utils
 
 ###############################################################################
 
 
 # código do programa principal
+
+def connect_db():
+    db_is_created = isfile('playlists.db')
+    connection = sqlite3.connect('playlists.db')
+    cursor = connection.cursor()
+
+    if not db_is_created:
+        with open('schema.sql', 'r') as fschema:
+            schema = fschema.read()
+            cursor.executescript(schema)
+        connection.commit()
+
+    return connection, cursor
+
 
 
 def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
@@ -41,42 +55,36 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     return args
 
 
+app = Flask(__name__)
+
+# TODO perguntar ao prof
+@app.before_request
+def before_request():
+    conn, cursor = connect_db()
+
+    # Store as globals
+    g.conn = conn
+    g.cursor = cursor
+
+@app.route("/", methods=['GET', 'POST'])
+def index():
+    if request.method == 'GET':
+        print('Index')
+        return {'data': g.cursor.execute('SELECT * FROM utilizadores').fetchall()}
+    elif request.method == 'POST':
+        print('Index POST')
+        g.cursor.execute('INSERT INTO utilizadores VALUES (?, ?)', ('lucas', 'lucas'))
+        g.conn.commit()
+
+        return {'data': 'ok'}, 201
+
 def main() -> None:
     """
     Programa principal
     """
     try:
-        args = parse()
-        skel = lock_skel(args['n'], args['k'])
-
-        listen_socket = sock_utils.create_tcp_server_socket(args['address'], args['port'], 1)
-
-        socket_list = [listen_socket]
-
-        while True:
-            R, W, X = sel.select(socket_list, [], [])
-            for sckt in R:
-                if sckt is listen_socket:
-                    conn_sock, addr = sckt.accept()
-                    addr, port = conn_sock.getpeername()
-                    print(f'\n------------------------\nLigado a {addr} no porto {port}')
-                    socket_list.append(conn_sock)
-                else:
-                    res_size_bytes = sock_utils.receive_all(sckt, 4)
-
-                    if len(res_size_bytes):
-                        size = struct.unpack('i', res_size_bytes)[0]
-                        req_bytes = sock_utils.receive_all(sckt, size)
-
-                        resp = skel.processMessage(req_bytes)
-
-                        size_bytes = struct.pack('i', len(resp))
-                        sckt.sendall(size_bytes)
-                        sckt.sendall(resp)
-                    else:  # isto pq o TCP tem o protocolo de finalização, e o select desbloqueia com uma mensagem vazia
-                        sckt.close()
-                        socket_list.remove(sckt)
-                        print('Cliente fechou a ligação\n------------------------\n')
+        # args = parse()
+        app.run()
     except KeyboardInterrupt:
         exit()
     except Exception as e:
