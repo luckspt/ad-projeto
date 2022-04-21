@@ -15,7 +15,7 @@ from flask import Flask, g, request, make_response
 from argparse import ArgumentParser
 from typing import Dict, Union, Tuple
 from spotify import Spotify
-from ApiException import ApiException
+from exceptions import ApiException
 
 
 ###############################################################################
@@ -28,6 +28,7 @@ spotify = Spotify()
 #  eliminar tudo ou se recebe uma lista no body
 #  eliminar um artista implica apagar as suas músicas? que elimina as músicas das playlists
 #  como é que se mostram as respostas do lado do cliente? mostrar o json? e em caso de erro?
+#  
 
 # código do programa principal
 

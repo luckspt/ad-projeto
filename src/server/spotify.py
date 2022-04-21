@@ -1,3 +1,9 @@
+"""
+Aplicações Distribuídas - Projeto 3 - server/spotify.py
+Grupo: 21
+Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
+"""
 from typing import Dict
 from dotenv import load_dotenv
 from os import getenv
