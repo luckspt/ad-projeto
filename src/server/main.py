@@ -28,6 +28,7 @@ spotify = Spotify()
 #  eliminar tudo ou se recebe uma lista no body
 #  eliminar um artista implica apagar as suas músicas? que elimina as músicas das playlists
 #  como é que se mostram as respostas do lado do cliente? mostrar o json? e em caso de erro?
+#  (GET /musicas) usamos query string [/musicas?utilizador=1&artista=5] para limitar às músicas do artista x (e o mesmo para utilizador e avaliação)
 #  
 
 # código do programa principal
@@ -285,7 +286,6 @@ def artista(aid: int):
 @app.route('/musicas', methods=['GET', 'POST', 'DELETE'])
 def musicas():
     if request.method == 'GET':
-        # TODO perguntar se usamos query string para limitar às músicas do artista x (e o mesmo para utilizador e avaliação)
         # LISTAR músicas
         g.cursor.execute('SELECT * FROM musicas')
         utilizadores = g.cursor.fetchall() or ()
