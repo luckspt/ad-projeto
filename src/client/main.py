@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 3 - lock_client.py
+Aplicações Distribuídas - Projeto 3 - client/main.py
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
@@ -9,15 +9,12 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 
 # Zona para fazer imports
 from argparse import ArgumentParser
-from time import sleep
-from typing import Any, Dict, Union, Tuple
-import requests
-
+import json
+from typing import Dict, Union, Tuple
+from api import Api
 
 # Programa principal
-
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
-
 
 def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     """
@@ -28,43 +25,21 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
         description='Cliente da API Flask do Serviço de Playlists')
 
     parser.add_argument(
-        "address", help="IP ou Hostname do Servidor que fornece os recursos", default='localhost')
+        "address",
+        help="IP ou Hostname do Servidor que fornece os recursos",
+        default='localhost'
+    )
 
     parser.add_argument(
-        "port", help="Porto TCP do Servidor que fornece os recursos", type=int, default=80)
+        "port",
+        help="Porto TCP do Servidor que fornece os recursos",
+        type=int,
+        default=9999
+    )
 
     args = parser.parse_args().__dict__
 
     return args
-
-
-class Api():
-    base_url = ''
-
-    def __init__(self, base_url: str) -> None:
-        self.base_url = base_url
-
-    def parse_response(res: requests.Response) -> Union[Dict[str, Any], None]:
-        try:
-            return res.json()
-        except requests.exceptions.JSONDecodeError:
-            return None
-
-    def get(self, path: str, query_params: Dict[str, str]) -> Union[Dict[str, Any], None]:
-        res = requests.get(f'{self.base_url}{path}', params=query_params)
-        return self.parse_response(res)
-
-    def post(self, path: str, body: Dict[str, str]) -> Union[Dict[str, Any], None]:
-        res = requests.post(f'{self.base_url}{path}', data=body)
-        return self.parse_response(res)
-
-    def put(self, path: str, body: Dict[str, str]) -> Union[Dict[str, Any], None]:
-        res = requests.put(f'{self.base_url}{path}', data=body)
-        return self.parse_response(res)
-
-    def delete(self, path: str) -> Union[Dict[str, Any], None]:
-        res = requests.put(f'{self.base_url}{path}')
-        return self.parse_response(res)
 
 
 def main() -> None:
@@ -76,6 +51,8 @@ def main() -> None:
 
         base_url = f'http://{args["address"]}:{args["port"]}'
         api = Api(base_url)
+
+        res = None
 
         while True:
             cmdinp = input('comando > ')
@@ -401,6 +378,8 @@ def main() -> None:
                     # TODO trabalhar a resposta
                 else:
                     raise Exception('UPDATE unknown command')
+
+            print(json.dumps(res, sort_keys=True, indent=4, ensure_ascii=False))
     except KeyboardInterrupt:
         pass
     except EOFError:
