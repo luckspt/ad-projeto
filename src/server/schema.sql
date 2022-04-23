@@ -1,4 +1,4 @@
-PRAGMA foreign_keys = ON;
+-- PRAGMA foreign_keys = ON;
 
 CREATE TABLE utilizadores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

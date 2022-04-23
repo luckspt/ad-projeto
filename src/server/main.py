@@ -11,9 +11,10 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 from os.path import isfile
 from sqlite3 import Cursor, Row, connect, Connection
 from flask import Flask, g, request, make_response
-
 from argparse import ArgumentParser
 from typing import Dict, Union, Tuple
+
+from werkzeug.exceptions import HTTPException
 from spotify import Spotify
 from exceptions import ApiException
 
@@ -23,7 +24,6 @@ spotify = Spotify()
 
 # TODO perguntar ao prof:
 #  (GET /musicas) usamos query string [/musicas?utilizador=1&artista=5] para limitar às músicas do artista x (e o mesmo para utilizador e avaliação)
-#  erros do flask (404, 500, etc) têm de ser overriden
 
 # código do programa principal
 
@@ -34,6 +34,7 @@ def connect_db() -> Tuple[Connection, Cursor]:
     db.row_factory = Row
 
     cursor = db.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON")
 
     if not db_is_created:
         with open('schema.sql', 'r') as fschema:
@@ -88,9 +89,8 @@ def before_request():
     g.db = conn
     g.cursor = cursor
 
-
 @app.errorhandler(ApiException)
-def handle_err(error: ApiException):
+def handle_api_err(error: ApiException):
     headers = {'Content-Type': 'application/api-problem+json'}
 
     http_code = error.http_code
@@ -104,6 +104,11 @@ def handle_err(error: ApiException):
 
     return response, http_code, headers
 
+
+@app.errorhandler(HTTPException)
+def handle_generic_err(e: HTTPException):
+    return handle_api_err(ApiException(e.name, e.description, e.code))
+    
 
 # ------------------------------------
 
