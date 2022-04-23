@@ -16,6 +16,7 @@ from api import Api
 # Programa principal
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
 
+
 def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     """
     Define o parser de argumentos.
@@ -341,13 +342,13 @@ def main() -> None:
                             'UPDATE MUSICA id_musica, avaliacao, id_utilizador are required')
                     elif len(sargs) > 3:
                         raise Exception('UPDATE MUSICA too many arguments')
-                    elif not ssargs[0].isdigit() or int(ssargs[0]) < 1:
+                    elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                         raise Exception(
                             'UPDATE MUSICA id_musica must be a digit greater or equal to 1')
-                    elif ssargs[1] not in AVALIACOES:
+                    elif sargs[1] not in AVALIACOES:
                         raise Exception(
                             f'UPDATE MUSICA avaliacao type must be one of {", ".join(AVALIACOES)}')
-                    elif not ssargs[2].isdigit() or int(ssargs[2]) < 1:
+                    elif not sargs[2].isdigit() or int(sargs[2]) < 1:
                         raise Exception(
                             'UPDATE MUSICA id_utilizador must be a digit greater or equal to 1')
 
@@ -366,7 +367,7 @@ def main() -> None:
                             'UPDATE UTILIZADOR id_utilizador, password are required')
                     elif len(sargs) > 2:
                         raise Exception('UPDATE UTILIZADOR too many arguments')
-                    elif not ssargs[0].isdigit() or int(ssargs[0]) < 1:
+                    elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                         raise Exception(
                             'UPDATE UTILIZADOR id_utilizador must be a digit greater or equal to 1')
 

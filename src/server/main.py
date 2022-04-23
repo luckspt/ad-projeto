@@ -17,19 +17,13 @@ from typing import Dict, Union, Tuple
 from spotify import Spotify
 from exceptions import ApiException
 
-
 ###############################################################################
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
 spotify = Spotify()
 
 # TODO perguntar ao prof:
-#  'Cada lista de músicas criada por um utilizador (...)', mas um utilizador só pode ter uma?
-#  o described by é para fazer um coiso dummy ou ...
-#  eliminar tudo ou se recebe uma lista no body
-#  eliminar um artista implica apagar as suas músicas? que elimina as músicas das playlists
-#  como é que se mostram as respostas do lado do cliente? mostrar o json? e em caso de erro?
 #  (GET /musicas) usamos query string [/musicas?utilizador=1&artista=5] para limitar às músicas do artista x (e o mesmo para utilizador e avaliação)
-#  
+#  erros do flask (404, 500, etc) têm de ser overriden
 
 # código do programa principal
 
@@ -83,12 +77,9 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
 
 app = Flask(__name__)
 
+
 # ------------------------------------
 # ---- Hooks
-# TODO perguntar ao prof
-#  1- o before_request
-#  2- se é a cada pedido
-#  3- se a conexão é global
 @app.before_request
 def before_request():
     conn, cursor = connect_db()
@@ -112,12 +103,14 @@ def handle_err(error: ApiException):
     }
 
     return response, http_code, headers
+
+
 # ------------------------------------
 
 # ------------------------------------
 # ---- Utilizadores
 @app.route('/utilizadores', methods=['GET', 'POST', 'DELETE'])
-def users():
+def utilizadores_endpoint():
     if request.method == 'GET':
         # LISTAR utilizadores
         g.cursor.execute('SELECT * FROM utilizadores')
@@ -153,16 +146,16 @@ def users():
 
 
 @app.route('/utilizadores/<int:uid>', methods=['GET', 'PUT', 'DELETE'])
-def user(uid: int):
+def utilizador_endpoint(uid: int):
     g.cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
-    user = g.cursor.fetchone()
-    if user is None:
+    utilizador = g.cursor.fetchone()
+    if utilizador is None:
         raise ApiException('Utilizador não encontrado',
                            f'Utilizador com id "{uid}" não encontrado', http_code=404)
 
     if request.method == 'GET':
         # DETAILS de utilizador singular
-        return dict(user)
+        return dict(utilizador)
     elif request.method == 'PUT':
         # ATUALIZAR utilizador singular
         body = request.get_json()
@@ -191,8 +184,9 @@ def user(uid: int):
 
 # TODO isto
 @app.route('/utilizadores/<int:u_id>/avaliacoes', methods=['GET', 'POST', 'DELETE'])
-def user_avaliacoes(u_id: int):
-    # TODO isto ou o GET /musicas?uid=123, pq o CREATE é <id_user> <id_musica> <avaliacao> mas o update é MUSIC <id_musica> <avaliacao> <id_user>, que faz com que o update seja feito na música e não no utilizador
+def utilizador_avaliacoes_endpoint(u_id: int):
+    # TODO isto ou o GET /musicas?uid=123, pq o CREATE é <id_user> <id_musica> <avaliacao> mas o update é MUSIC
+    #  <id_musica> <avaliacao> <id_user>, que faz com que o update seja feito na música e não no utilizador
     if request.method == 'GET':
         # GET avaliacoes do utilizador
         g.cursor.execute('SELECT id FROM avaliacoes WHERE id = ?', (u_id,))
@@ -205,9 +199,9 @@ def user_avaliacoes(u_id: int):
     elif request.method == 'POST':
         # CRIAR avaliação
         # TODO verificar se existe o id
-        #sigla = request.json[""]
-        #designacao =  request.json[""]
-        #g.cursor.execute('INSERT INTO avaliacoes (id, sigla, designacao) VALUES (?, ?, ?)', (u_id, sigla, designacao))
+        # sigla = request.json[""]
+        # designacao =  request.json[""]
+        # g.cursor.execute('INSERT INTO avaliacoes (id, sigla, designacao) VALUES (?, ?, ?)', (u_id, sigla, designacao))
 
         pass
     elif request.method == 'DELETE':
@@ -217,12 +211,14 @@ def user_avaliacoes(u_id: int):
         r = make_response()
         print(r.headers)  # TODO
         pass
+
+
 # ------------------------------------
 
 # ------------------------------------
 # ---- Artistas
 @app.route('/artistas', methods=['GET', 'POST', 'DELETE'])
-def artistas():
+def artistas_endpoint():
     if request.method == 'GET':
         # LISTAR artistas
         g.cursor.execute('SELECT * FROM artistas')
@@ -263,7 +259,7 @@ def artistas():
 
 
 @app.route('/artistas/<int:aid>', methods=['GET', 'DELETE'])
-def artista(aid: int):
+def artista_endpoint(aid: int):
     g.cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
     artista = g.cursor.fetchone()
     if artista is None:
@@ -279,12 +275,14 @@ def artista(aid: int):
         g.db.commit()
 
         return '', 204
+
+
 # ------------------------------------
 
 # ------------------------------------
 # ---- Músicas
 @app.route('/musicas', methods=['GET', 'POST', 'DELETE'])
-def musicas():
+def musicas_endpoint():
     if request.method == 'GET':
         # LISTAR músicas
         g.cursor.execute('SELECT * FROM musicas')
@@ -339,7 +337,7 @@ def musicas():
 
 
 @app.route('/musicas/<int:mid>', methods=['GET', 'DELETE'])
-def musica(mid: int):
+def musica_endpoint(mid: int):
     g.cursor.execute('SELECT * FROM musicas WHERE id = ?', (mid,))
     musica = g.cursor.fetchone()
     if musica is None:
@@ -355,6 +353,8 @@ def musica(mid: int):
         g.db.commit()
 
         return '', 204
+
+
 # ------------------------------------
 
 

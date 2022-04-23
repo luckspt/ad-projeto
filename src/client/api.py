@@ -10,7 +10,7 @@ from typing import Any, Dict, Union
 import requests
 
 
-class Api():
+class Api:
     base_url: str = None
 
     def __init__(self, base_url: str) -> None:

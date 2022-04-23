@@ -11,7 +11,8 @@ from api import Api
 
 load_dotenv()
 
-class Spotify():
+
+class Spotify:
     api: Api = None
 
     def __init__(self) -> None:
@@ -28,8 +29,8 @@ class Spotify():
 
         return headers
 
-    def artist(self, id: str):
-        return self.api.get(f'/artists/{id}', headers=self.headers())
+    def artist(self, artist_id: str):
+        return self.api.get(f'/artists/{artist_id}', headers=self.headers())
 
-    def track(self, id: str):
-        return self.api.get(f'/tracks/{id}', headers=self.headers())
+    def track(self, track_id: str):
+        return self.api.get(f'/tracks/{track_id}', headers=self.headers())

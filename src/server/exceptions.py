@@ -4,11 +4,13 @@ Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
 """
+
+
 class ApiException(Exception):
     def __init__(self, title: str, detail: str,
-        described_by: str = 'https://google.pt',
-        support_id: str = 'https://youtube.com',
-        http_code: int = 500) -> None:
+                 described_by: str = 'https://google.pt',
+                 support_id: str = 'https://youtube.com',
+                 http_code: int = 500) -> None:
         self.title = title
         self.detail = detail
         self.described_by = described_by
