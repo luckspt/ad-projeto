@@ -10,9 +10,10 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 # Zona para fazer importação
 from os.path import isfile
 from sqlite3 import Cursor, Row, connect, Connection
-from flask import Flask, g, request, make_response
+import sqlite3
+from flask import Flask, request
 from argparse import ArgumentParser
-from typing import Dict, Union, Tuple
+from typing import Any, Dict, List, Union, Tuple
 
 from werkzeug.exceptions import HTTPException
 from spotify import Spotify
@@ -22,15 +23,19 @@ from exceptions import ApiException
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
 spotify = Spotify()
 
-# TODO perguntar ao prof:
-#  (GET /musicas) usamos query string [/musicas?utilizador=1&artista=5] para limitar às músicas do artista x (e o mesmo para utilizador e avaliação)
-
 # código do programa principal
 
 
-def connect_db() -> Tuple[Connection, Cursor]:
-    db_is_created = isfile('playlists.db')
-    db = connect('playlists.db')
+def force_params(body: Dict[str, Any], keys: List[str], name: str) -> None:
+    for key in keys:
+        if key not in body:
+            raise ApiException(
+                f'"{key}" é obrigatório', f'"{key}" é obrigatório num objeto {name}', http_code=400)
+
+
+def connect_db(filename='playlists.db') -> Tuple[Connection, Cursor]:
+    db_is_created = isfile(filename)
+    db = connect(filename)
     db.row_factory = Row
 
     cursor = db.cursor()
@@ -81,14 +86,6 @@ app = Flask(__name__)
 
 # ------------------------------------
 # ---- Hooks
-@app.before_request
-def before_request():
-    conn, cursor = connect_db()
-
-    # Store as globals
-    g.db = conn
-    g.cursor = cursor
-
 @app.errorhandler(ApiException)
 def handle_api_err(error: ApiException):
     headers = {'Content-Type': 'application/api-problem+json'}
@@ -108,18 +105,31 @@ def handle_api_err(error: ApiException):
 @app.errorhandler(HTTPException)
 def handle_generic_err(e: HTTPException):
     return handle_api_err(ApiException(e.name, e.description, e.code))
-    
+
+
+@app.errorhandler(sqlite3.IntegrityError)
+def handle_sqlite_err(e: sqlite3.IntegrityError):
+    return handle_api_err(ApiException(
+        'Erro de integridade',
+        e.args[0],
+        400
+    ))
 
 # ------------------------------------
 
 # ------------------------------------
 # ---- Utilizadores
+
+
 @app.route('/utilizadores', methods=['GET', 'POST', 'DELETE'])
 def utilizadores_endpoint():
+    db, cursor = connect_db()
+
     if request.method == 'GET':
         # LISTAR utilizadores
-        g.cursor.execute('SELECT * FROM utilizadores')
-        utilizadores = g.cursor.fetchall() or ()
+        cursor.execute('SELECT * FROM utilizadores')
+
+        utilizadores = cursor.fetchall() or ()
 
         return {
             'utilizador': list(map(dict, utilizadores))
@@ -127,33 +137,33 @@ def utilizadores_endpoint():
     elif request.method == 'POST':
         # CRIAR utilizador
         body = request.get_json()
+        force_params(body, ['nome', 'senha'], 'utilizador')
 
-        keys = ['nome', 'senha']
-        for key in keys:
-            if key not in body:
-                raise ApiException(
-                    f'"{key}" é obrigatório', f'"{key}" é obrigatório num objeto utilizador', http_code=400)
+        nome, senha = body["nome"], body["senha"]
 
-        nome = body["nome"]
-        senha = body["senha"]
+        cursor.execute(
+            'INSERT INTO utilizadores (nome, senha) VALUES (?, ?) RETURNING *', (nome, senha))
+        utilizador = cursor.fetchone()
+        db.commit()
 
-        g.cursor.execute(
-            'INSERT INTO utilizadores (nome, senha) VALUES (?, ?)', (nome, senha))
-        g.db.commit()
 
-        return '', 201
+        return {
+            'utilizador': dict(utilizador)
+        }, 201
     elif request.method == 'DELETE':
         # ELIMINAR utilizadores
-        g.cursor.execute('DELETE FROM utilizadores')
-        g.db.commit()
+        cursor.execute('DELETE FROM utilizadores')
+        db.commit()
 
         return '', 204
 
 
 @app.route('/utilizadores/<int:uid>', methods=['GET', 'PUT', 'DELETE'])
 def utilizador_endpoint(uid: int):
-    g.cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
-    utilizador = g.cursor.fetchone()
+    db, cursor = connect_db()
+
+    cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
+    utilizador = cursor.fetchone()
     if utilizador is None:
         raise ApiException('Utilizador não encontrado',
                            f'Utilizador com id "{uid}" não encontrado', http_code=404)
@@ -164,70 +174,127 @@ def utilizador_endpoint(uid: int):
     elif request.method == 'PUT':
         # ATUALIZAR utilizador singular
         body = request.get_json()
+        force_params(body, ['senha'], 'utilizador')
 
-        keys = ['nome', 'senha']
-        for key in keys:
-            if key not in body:
-                raise ApiException(
-                    f'"{key}" é obrigatório', f'"{key}" é obrigatório num objeto utilizador', http_code=400)
-
-        nome = body["nome"]
         senha = body["senha"]
 
-        g.cursor.execute(
-            'UPDATE utilizadores SET nome = ?, senha = ? WHERE id = ?', (nome, senha, uid))
-        g.db.commit()
+        cursor.execute(
+            'UPDATE utilizadores SET senha = ? WHERE id = ? RETURNING *', (senha, uid))
+        utilizador = cursor.fetchone()
+        db.commit()
 
-        return '', 204
+        return {
+            'utilizador': dict(utilizador)
+        }, 200
     elif request.method == 'DELETE':
         # ELIMINAR utilizador singular
-        g.cursor.execute('DELETE FROM utilizadores WHERE id = ?', (uid,))
-        g.db.commit()
+        cursor.execute('DELETE FROM utilizadores WHERE id = ?', (uid,))
+        db.commit()
 
         return '', 204
 
 
-# TODO isto
-@app.route('/utilizadores/<int:u_id>/avaliacoes', methods=['GET', 'POST', 'DELETE'])
-def utilizador_avaliacoes_endpoint(u_id: int):
-    # TODO isto ou o GET /musicas?uid=123, pq o CREATE é <id_user> <id_musica> <avaliacao> mas o update é MUSIC
-    #  <id_musica> <avaliacao> <id_user>, que faz com que o update seja feito na música e não no utilizador
-    if request.method == 'GET':
-        # GET avaliacoes do utilizador
-        g.cursor.execute('SELECT id FROM avaliacoes WHERE id = ?', (u_id,))
-        u = g.cursor.fetchone()
-        if u is None:
-            raise ApiException()
-        r = make_response(u)
-        print(r.headers)  # TODO
-        pass
-    elif request.method == 'POST':
-        # CRIAR avaliação
-        # TODO verificar se existe o id
-        # sigla = request.json[""]
-        # designacao =  request.json[""]
-        # g.cursor.execute('INSERT INTO avaliacoes (id, sigla, designacao) VALUES (?, ?, ?)', (u_id, sigla, designacao))
+@app.route('/utilizadores/<int:uid>/avaliacoes', methods=['POST'])
+def utilizador_musicas_endpoint(uid: int):
+    db, cursor = connect_db()
 
-        pass
-    elif request.method == 'DELETE':
-        # TODO perguntar se é eliminar tudo ou se recebe uma lista no body
-        # ELIMINAR avaliações do utilizador
-        g.cursor.execute('DELETE FROM avaliacoes WHERE id = ?', (u_id,))
-        r = make_response()
-        print(r.headers)  # TODO
-        pass
+    cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
+    utilizador = cursor.fetchone()
+    if utilizador is None:
+        raise ApiException('Utilizador não encontrado',
+                           f'Utilizador com id "{uid}" não encontrado', http_code=404)
 
+    if request.method == 'POST':
+        # CRIAR avaliação de utilizador singular
+        body = request.get_json()
+        force_params(body, ['musica', 'avaliacao'], 'avaliacao')
+
+        musica, avaliacao = body["musica"], body["avaliacao"]
+        if avaliacao not in AVALIACOES:
+            raise ApiException(
+                'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+
+        cursor.execute(
+            'SELECT id FROM avaliacoes WHERE sigla = ?', (avaliacao,))
+        id_avaliacao = cursor.fetchone()
+        if not id_avaliacao:
+            raise ApiException(
+                'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+        id_avaliacao = dict(id_avaliacao)['id']
+
+        cursor.execute(
+            'INSERT INTO playlists (id_user, id_musica, id_avaliacao) VALUES (?, ?, ?) RETURNING *', (uid, musica, id_avaliacao))
+        avaliacao = cursor.fetchone()
+        db.commit()
+
+        avaliacao = dict(avaliacao)
+        del avaliacao['id_avaliacao'] 
+        avaliacao['avaliacao'] = body['avaliacao']
+
+        return {
+            'avaliacao': avaliacao
+        }, 201
+
+
+@app.route('/utilizadores/<int:uid>/avaliacoes/<int:mid>', methods=['PUT'])
+def utilizador_avaliacao_endpoint(uid: int, mid: int):
+    db, cursor = connect_db()
+
+    cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
+    utilizador = cursor.fetchone()
+    if utilizador is None:
+        raise ApiException('Utilizador não encontrado',
+                           f'Utilizador com id "{uid}" não encontrado', http_code=404)
+
+    cursor.execute(
+        'SELECT * FROM playlists WHERE id_user = ? AND id_musica = ?', (uid, mid))
+    db_avaliacao = cursor.fetchone()
+    if db_avaliacao is None:
+        raise ApiException('Avaliação não encontrada',
+                           f'Avaliação com id_user "{uid}" e id_musica "{mid}" não encontrada', http_code=404)
+
+    body = request.get_json()
+    force_params(body, ['avaliacao'], 'avaliacao')
+
+    avaliacao = body["avaliacao"]
+    if avaliacao not in AVALIACOES:
+        raise ApiException(
+            'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+
+    cursor.execute('SELECT id FROM avaliacoes WHERE sigla = ?', (avaliacao,))
+    id_avaliacao = cursor.fetchone()
+    if not id_avaliacao:
+        raise ApiException(
+            'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+    id_avaliacao = dict(id_avaliacao)['id']
+
+    cursor.execute(
+        'UPDATE playlists SET id_avaliacao = ? WHERE id_user = ? AND id_musica = ? RETURNING *', (id_avaliacao, uid, mid))
+    avaliacao = cursor.fetchone()
+    db.commit()
+
+    avaliacao = dict(avaliacao)
+    del avaliacao['id_avaliacao'] 
+    avaliacao['avaliacao'] = body['avaliacao']
+
+    return {
+        'avaliacao': avaliacao
+    }, 200
 
 # ------------------------------------
 
 # ------------------------------------
 # ---- Artistas
+
+
 @app.route('/artistas', methods=['GET', 'POST', 'DELETE'])
 def artistas_endpoint():
+    db, cursor = connect_db()
+
     if request.method == 'GET':
         # LISTAR artistas
-        g.cursor.execute('SELECT * FROM artistas')
-        artistas = g.cursor.fetchall() or ()
+        cursor.execute('SELECT * FROM artistas')
+        artistas = cursor.fetchall() or ()
 
         return {
             'artistas': list(map(dict, artistas))
@@ -236,11 +303,7 @@ def artistas_endpoint():
         # CRIAR artista
         body = request.get_json()
 
-        keys = ['id_spotify']
-        for key in keys:
-            if key not in body:
-                raise ApiException(
-                    f'"{key}" é obrigatório', f'"{key}" é obrigatório num objeto artista', http_code=400)
+        force_params(body, ['id_spotify'], 'artista')
 
         id_spotify = body["id_spotify"]
 
@@ -249,24 +312,29 @@ def artistas_endpoint():
             raise ApiException(
                 'Artista não encontrado', f'Artista com id_spotify "{id_spotify}" não encontrado', http_code=404)
 
-        g.cursor.execute(
-            'INSERT INTO artistas (id_spotify, nome) VALUES (?, ?)', (id_spotify, artista['name']))
-        g.db.commit()
+        cursor.execute(
+            'INSERT INTO artistas (id_spotify, nome) VALUES (?, ?) RETURNING *', (id_spotify, artista['name']))
+        artista = cursor.fetchone()
+        db.commit()
 
-        return '', 201
+        return {
+            'artista': dict(artista)
+        }, 201
 
     elif request.method == 'DELETE':
         # ELIMINAR artistas
-        g.cursor.execute('DELETE FROM artistas')
-        g.db.commit()
+        cursor.execute('DELETE FROM artistas')
+        db.commit()
 
         return '', 204
 
 
 @app.route('/artistas/<int:aid>', methods=['GET', 'DELETE'])
 def artista_endpoint(aid: int):
-    g.cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
-    artista = g.cursor.fetchone()
+    db, cursor = connect_db()
+
+    cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
+    artista = cursor.fetchone()
     if artista is None:
         raise ApiException('Artista não encontrado',
                            f'Artista com id "{aid}" não encontrado', http_code=404)
@@ -276,35 +344,59 @@ def artista_endpoint(aid: int):
         return dict(artista)
     elif request.method == 'DELETE':
         # ELIMINAR artista singular
-        g.cursor.execute('DELETE FROM artistas WHERE id = ?', (aid,))
-        g.db.commit()
+        cursor.execute('DELETE FROM artistas WHERE id = ?', (aid,))
+        db.commit()
 
         return '', 204
 
 
+@app.route('/artistas/<int:aid>/musicas', methods=['GET', 'DELETE'])
+def artista_musicas_endpoint(aid: int):
+    db, cursor = connect_db()
+
+    cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
+    artista = cursor.fetchone()
+    if artista is None:
+        raise ApiException('Artista não encontrado',
+                           f'Artista com id "{aid}" não encontrado', http_code=404)
+
+    if request.method == 'GET':
+        # LISTAR musicas de artista singular
+        cursor.execute(
+            'SELECT * FROM musicas WHERE id_artista = ?', (aid,))
+        musicas = cursor.fetchall() or ()
+
+        return {
+            'musicas': list(map(dict, musicas))
+        }
+    elif request.method == 'DELETE':
+        # ELIMINAR musicas de artista singular
+        cursor.execute('DELETE FROM musicas WHERE id_artista = ?', (aid,))
+        db.commit()
+
+        return '', 204
 # ------------------------------------
 
 # ------------------------------------
 # ---- Músicas
+
+
 @app.route('/musicas', methods=['GET', 'POST', 'DELETE'])
 def musicas_endpoint():
+    db, cursor = connect_db()
+
     if request.method == 'GET':
         # LISTAR músicas
-        g.cursor.execute('SELECT * FROM musicas')
-        utilizadores = g.cursor.fetchall() or ()
+        cursor.execute('SELECT * FROM musicas')
+        musicas = cursor.fetchall() or ()
 
         return {
-            'musicas': list(map(dict, utilizadores))
+            'musicas': list(map(dict, musicas))
         }
     elif request.method == 'POST':
         # CRIAR música
         body = request.get_json()
-
-        keys = ['id_spotify']
-        for key in keys:
-            if key not in body:
-                raise ApiException(
-                    f'"{key}" é obrigatório', f'"{key}" é obrigatório num objeto música', http_code=400)
+        force_params(body, ['id_spotify'], 'musica')
 
         id_spotify = body['id_spotify']
 
@@ -315,36 +407,41 @@ def musicas_endpoint():
 
         # Tratar do Artista
         s_artista = musica['artists'][0]
-        g.cursor.execute(
+        cursor.execute(
             'SELECT * FROM artistas WHERE id_spotify = ?', (s_artista['id'],))
-        artista = g.cursor.fetchone()
+        artista = cursor.fetchone()
 
-        if artista is None:
+        if not artista:
             # Artista não existe na bd ainda
-            g.cursor.execute('INSERT INTO artistas (id_spotify, nome) VALUES (?, ?)',
-                             (s_artista['id'], s_artista['name']))
-            g.db.commit()
+            cursor.execute('INSERT INTO artistas (id_spotify, nome) VALUES (?, ?)',
+                           (s_artista['id'], s_artista['name']))
+            db.commit()
 
-            artista = {'id': g.cursor.lastrowid}
+            artista = {'id': cursor.lastrowid}
 
-        g.cursor.execute('INSERT INTO musicas (id_spotify, nome, id_artista) VALUES (?, ?, ?)',
-                         (musica['id'], musica['name'], artista['id']))
-        g.db.commit()
+        cursor.execute('INSERT INTO musicas (id_spotify, nome, id_artista) VALUES (?, ?, ?) RETURNING *',
+                       (musica['id'], musica['name'], artista['id']))
+        musica = cursor.fetchone()
+        db.commit()
 
-        return '', 201
+        return {
+            'musica': dict(musica)
+        }, 201
 
     elif request.method == 'DELETE':
-        # ELIMINAR artistas
-        g.cursor.execute('DELETE FROM artistas')
-        g.db.commit()
+        # ELIMINAR musicas
+        cursor.execute('DELETE FROM musicas')
+        db.commit()
 
         return '', 204
 
 
 @app.route('/musicas/<int:mid>', methods=['GET', 'DELETE'])
 def musica_endpoint(mid: int):
-    g.cursor.execute('SELECT * FROM musicas WHERE id = ?', (mid,))
-    musica = g.cursor.fetchone()
+    db, cursor = connect_db()
+
+    cursor.execute('SELECT * FROM musicas WHERE id = ?', (mid,))
+    musica = cursor.fetchone()
     if musica is None:
         raise ApiException('Música não encontrada',
                            f'Música com id "{mid}" não encontrada', http_code=404)
@@ -354,12 +451,45 @@ def musica_endpoint(mid: int):
         return dict(musica)
     elif request.method == 'DELETE':
         # ELIMINAR música singular
-        g.cursor.execute('DELETE FROM musicas WHERE id = ?', (mid,))
-        g.db.commit()
+        cursor.execute('DELETE FROM musicas WHERE id = ?', (mid,))
+        db.commit()
 
         return '', 204
 
 
+# ------------------------------------
+# Avaliacoes -------------------------
+@app.route('/avaliacoes/<aid>/musicas', methods=['GET', 'DELETE'])
+def avaliacao_musicas_endpoint(aid: str):
+    if aid not in AVALIACOES:
+        raise ApiException(f'Avaliação inválida',
+                           f'A avaliação "{aid}" não é válida', http_code=404)
+
+    db, cursor = connect_db()
+
+    cursor.execute('SELECT id FROM avaliacoes WHERE sigla = ?', (aid,))
+    avaliacao = cursor.fetchone()
+    if not avaliacao:
+        raise ApiException(
+            'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+    avaliacao = dict(avaliacao)['id']
+
+    if request.method == 'GET':
+        # LISTAR músicas
+        cursor.execute(
+            f'SELECT * FROM musicas WHERE id IN (SELECT id_musica FROM playlists WHERE id_avaliacao = ?)', (avaliacao,))
+        musicas = cursor.fetchall() or ()
+
+        return {
+            'musicas': list(map(dict, musicas))
+        }
+    elif request.method == 'DELETE':
+        # ELIMINAR músicas
+        cursor.execute(
+            'DELETE FROM musicas WHERE id IN (SELECT id_musica FROM playlists WHERE id_avaliacao = ?)', (avaliacao,))
+        db.commit()
+
+        return '', 204
 # ------------------------------------
 
 

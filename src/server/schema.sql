@@ -1,5 +1,5 @@
 -- PRAGMA foreign_keys = ON;
-
+-- TODO unique
 CREATE TABLE utilizadores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT,
@@ -8,7 +8,7 @@ CREATE TABLE utilizadores (
 
 CREATE TABLE musicas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_spotify TEXT,
+    id_spotify TEXT UNIQUE,
     nome TEXT,
     id_artista INTEGER,
     FOREIGN KEY(id_artista) REFERENCES artistas(id) ON DELETE CASCADE
@@ -16,7 +16,7 @@ CREATE TABLE musicas (
 
 CREATE TABLE artistas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_spotify TEXT,
+    id_spotify TEXT UNIQUE,
     nome TEXT
 );
 
@@ -35,7 +35,6 @@ CREATE TABLE playlists (
     FOREIGN KEY(id_musica) REFERENCES musicas(id) ON DELETE CASCADE,
     FOREIGN KEY(id_avaliacao) REFERENCES avaliacoes(id) ON DELETE CASCADE
 );
-
 
 -- Default state
 INSERT INTO
