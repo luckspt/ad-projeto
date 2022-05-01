@@ -10,7 +10,7 @@ class ApiException(Exception):
     def __init__(self, title: str, detail: str,
                  http_code: int = 500,
                  described_by: str = 'https://youtu.be/71sqkgaUncI',
-                 support_id: str = 'https://youtu.be/pRpeEdMmmQ0',) -> None:
+                 support_id: str = 'https://youtu.be/eQul-rkcGPQ',) -> None:
         self.title = title
         self.detail = detail
         self.described_by = described_by

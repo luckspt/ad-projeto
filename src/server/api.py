@@ -1,1 +1,0 @@
-/home/lucks/code/fcul/ad-projeto/src/client/api.py

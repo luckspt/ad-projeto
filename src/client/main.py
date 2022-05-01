@@ -13,7 +13,8 @@ import json
 from typing import Dict, Union, Tuple
 import requests
 
-from api import Api
+from reqs import Reqs
+from playlists import Playlists
 
 # Programa principal
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
@@ -50,10 +51,10 @@ def main() -> None:
     Programa principal
     """
     args = parse()
-    
+
     try:
         base_url = f'http://{args["address"]}:{args["port"]}'
-        api = Api(base_url)
+        api = Playlists(Reqs(base_url))
 
         res = None
 
@@ -81,37 +82,30 @@ def main() -> None:
                             raise Exception(
                                 'CREATE UTILIZADOR nome and senha are required')
                         elif len(sargs) > 2:
-                            raise Exception('CREATE UTILIZADOR too many arguments')
+                            raise Exception(
+                                'CREATE UTILIZADOR too many arguments')
 
-                        dados = {
-                            'nome': sargs[0],
-                            'senha': sargs[1]
-                        }
+                        res = api.create_user(*sargs)
 
-                        res = api.post('/utilizadores', dados)
                     elif scmd == 'ARTISTA':
                         if len(sargs) < 1:
                             raise Exception(
                                 'CREATE ARTISTA id_spotify is required')
-                        elif len(cargs) > 1:
-                            raise Exception('CREATE ARTISTA too many arguments')
+                        elif len(sargs) > 1:
+                            raise Exception(
+                                'CREATE ARTISTA too many arguments')
 
-                        dados = {
-                            'id_spotify': sargs[0]
-                        }
+                        res = api.create_artist(*sargs)
 
-                        res = api.post('/artistas', dados)
                     elif scmd == 'MUSICA':
                         if len(sargs) < 1:
-                            raise Exception('CREATE MUSICA id_spotify is required')
+                            raise Exception(
+                                'CREATE MUSICA id_spotify is required')
                         elif len(sargs) > 1:
                             raise Exception('CREATE MUSICA too many arguments')
 
-                        dados = {
-                            'id_spotify': sargs[0]
-                        }
+                        res = api.create_music(*sargs)
 
-                        res = api.post('/musicas', dados)
                     else:
                         if len(cargs) < 3:
                             raise Exception(
@@ -128,12 +122,7 @@ def main() -> None:
                             raise Exception(
                                 f'CREATE avaliacao type must be one of {", ".join(AVALIACOES)}')
 
-                        dados = {
-                            'musica': cargs[1],
-                            'avaliacao': cargs[2]
-                        }
-
-                        res = api.post(f'/utilizadores/{cargs[0]}/avaliacoes', dados)
+                        res = api.create_user_rating(*cargs)
 
                 elif cmd == 'READ':
                     if not cargs:
@@ -145,34 +134,37 @@ def main() -> None:
                             raise Exception(
                                 'READ UTILIZADOR id_utilizador is required')
                         elif len(sargs) > 1:
-                            raise Exception('READ UTILIZADOR too many arguments')
+                            raise Exception(
+                                'READ UTILIZADOR too many arguments')
                         elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                             raise Exception(
                                 'READ UTILIZADOR id_utilizador must be a digit greater or equal to 1')
 
-                        res = api.get(f'/utilizadores/{sargs[0]}')
+                        res = api.get_user(*sargs)
 
                     elif scmd == 'ARTISTA':
                         if len(sargs) < 1:
-                            raise Exception('READ ARTISTA id_artista is required')
+                            raise Exception(
+                                'READ ARTISTA id_artista is required')
                         elif len(sargs) > 1:
                             raise Exception('READ ARTISTA too many arguments')
                         elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                             raise Exception(
                                 'READ ARTISTA id_artista must be a digit greater or equal to 1')
 
-                        res = api.get(f'/artistas/{sargs[0]}')
+                        res = api.get_artist(*sargs)
 
                     elif scmd == 'MUSICA':
                         if len(sargs) < 1:
-                            raise Exception('READ MUSICA id_musica is required')
+                            raise Exception(
+                                'READ MUSICA id_musica is required')
                         elif len(sargs) > 1:
                             raise Exception('READ MUSICA too many arguments')
                         elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                             raise Exception(
                                 'READ MUSICA id_musica must be a digit greater or equal to 1')
 
-                        res = api.get(f'/musicas/{sargs[0]}')
+                        res = api.get_music(*sargs)
 
                     elif scmd == 'ALL':
                         if not sargs:
@@ -180,21 +172,22 @@ def main() -> None:
                         sscmd, *ssargs = sargs
 
                         if sscmd == 'UTILIZADORES':
-                            res = api.get('/utilizadores')
+                            res = api.get_all_users()
                         elif sscmd == 'ARTISTAS':
-                            res = api.get('/artistas')
+                            res = api.get_all_artists()
                         elif sscmd == 'MUSICAS':
                             if len(ssargs) == 0:
-                                res = api.get('/musicas')
+                                res = api.get_all_musics()
                             elif len(ssargs) == 1:
                                 # ALL MUSICAS <avaliacao>
                                 if ssargs[0] not in AVALIACOES:
                                     raise Exception(
                                         f'READ ALL MUSICAS avaliacao type must be one of {", ".join(AVALIACOES)}')
 
-                                res = api.get(f'/avaliacoes/{ssargs[0]}/musicas')
+                                res = api.get_all_musics(*ssargs)
                             else:
-                                pass
+                                raise Exception(
+                                    'READ ALL MUSICAS too many arguments')
                         elif sscmd == 'MUSICAS_A':
                             if len(ssargs) < 1:
                                 raise Exception(
@@ -206,7 +199,7 @@ def main() -> None:
                                 raise Exception(
                                     'READ ALL MUSICAS_A id_artista must be a digit greater or equal to 1')
 
-                            res = api.get(f'/artistas/{ssargs[0]}/musicas')
+                            res = api.get_all_musics_artist(*ssargs)
                         elif sscmd == 'MUSICAS_U':
                             if len(ssargs) < 1:
                                 raise Exception(
@@ -218,7 +211,7 @@ def main() -> None:
                                 raise Exception(
                                     'READ ALL MUSICAS_U id_utilizador must be a digit greater or equal to 1')
 
-                            res = api.get(f'/utilizadores/{ssargs[0]}/musicas')
+                            res = api.get_all_musics_user(*ssargs)
                         else:
                             raise Exception('READ ALL unknown command')
                     else:
@@ -233,35 +226,38 @@ def main() -> None:
                             raise Exception(
                                 'DELETE UTILIZADOR id_utilizador is required')
                         elif len(sargs) > 1:
-                            raise Exception('DELETE UTILIZADOR too many arguments')
+                            raise Exception(
+                                'DELETE UTILIZADOR too many arguments')
                         elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                             raise Exception(
                                 'DELETE UTILIZADOR id_utilizador must be a digit greater or equal to 1')
 
-                        res = api.delete(f'/utilizadores/{sargs[0]}')
+                        res = api.delete_user(*sargs)
 
                     elif scmd == 'ARTISTA':
                         if len(sargs) < 1:
                             raise Exception(
                                 'DELETE ARTISTA id_artista is required')
                         elif len(sargs) > 1:
-                            raise Exception('DELETE ARTISTA too many arguments')
+                            raise Exception(
+                                'DELETE ARTISTA too many arguments')
                         elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                             raise Exception(
                                 'DELETE ARTISTA id_artista must be a digit greater or equal to 1')
 
-                        res = api.delete(f'/artistas/{sargs[0]}')
+                        res = api.delete_artist(*sargs)
 
                     elif scmd == 'MUSICA':
                         if len(sargs) < 1:
-                            raise Exception('DELETE MUSICA id_musica is required')
+                            raise Exception(
+                                'DELETE MUSICA id_musica is required')
                         elif len(sargs) > 1:
                             raise Exception('DELETE MUSICA too many arguments')
                         elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                             raise Exception(
                                 'DELETE MUSICA id_musica must be a digit greater or equal to 1')
 
-                        res = api.delete(f'/musicas/{sargs[0]}')
+                        res = api.delete_music(*sargs)
 
                     elif scmd == 'ALL':
                         if not sargs:
@@ -269,21 +265,22 @@ def main() -> None:
                         sscmd, *ssargs = sargs
 
                         if sscmd == 'UTILIZADORES':
-                            res = api.delete('/utilizadores')
+                            res = api.delete_all_users()
                         elif sscmd == 'ARTISTAS':
-                            res = api.delete('/artistas')
+                            res = api.delete_all_artists()
                         elif sscmd == 'MUSICAS':
                             if len(ssargs) == 0:
-                                res = api.delete('/musicas')
+                                res = api.delete_all_musics()
                             elif len(ssargs) == 1:
                                 # ALL MUSICAS <avaliacao>
                                 if ssargs[0] not in AVALIACOES:
                                     raise Exception(
                                         f'DELETE ALL MUSICAS avaliacao type must be one of {", ".join(AVALIACOES)}')
 
-                                res = api.delete(f'/avaliacoes/{ssargs[0]}/musicas')
+                                res = api.delete_all_musics(*ssargs)
                             else:
-                                pass
+                                raise Exception(
+                                    'DELETE ALL MUSICAS too many arguments')
                         elif sscmd == 'MUSICAS_A':
                             if len(ssargs) < 1:
                                 raise Exception(
@@ -295,7 +292,7 @@ def main() -> None:
                                 raise Exception(
                                     'DELETE ALL MUSICAS_A id_artista must be a digit greater or equal to 1')
 
-                            res = api.delete(f'/artistas/{ssargs[0]}/musicas')
+                            res = api.delete_all_musics_artist(*ssargs)
                         elif sscmd == 'MUSICAS_U':
                             if len(ssargs) < 1:
                                 raise Exception(
@@ -307,7 +304,7 @@ def main() -> None:
                                 raise Exception(
                                     'DELETE ALL MUSICAS_U id_utilizador must be a digit greater or equal to 1')
 
-                            res = api.delete(f'/utilizadores/{ssargs[0]}/musicas')
+                            res = api.delete_all_musics_user(*ssargs)
                         else:
                             raise Exception('DELETE ALL unknown command')
                     else:
@@ -333,32 +330,25 @@ def main() -> None:
                             raise Exception(
                                 'UPDATE MUSICA id_utilizador must be a digit greater or equal to 1')
 
-                        dados = {
-                            'avaliacao': sargs[1],
-                        }
-
-                        res = api.put(f'/utilizadores/{sargs[2]}/avaliacoes/{sargs[0]}', dados)
-
+                        res = api.update_music(*sargs)
                     elif scmd == 'UTILIZADOR':
                         if len(sargs) < 2:
                             raise Exception(
                                 'UPDATE UTILIZADOR id_utilizador, password are required')
                         elif len(sargs) > 2:
-                            raise Exception('UPDATE UTILIZADOR too many arguments')
+                            raise Exception(
+                                'UPDATE UTILIZADOR too many arguments')
                         elif not sargs[0].isdigit() or int(sargs[0]) < 1:
                             raise Exception(
                                 'UPDATE UTILIZADOR id_utilizador must be a digit greater or equal to 1')
 
-                        dados = {
-                            'password': sargs[1]
-                        }
-
-                        res = api.put('/utilizadores', dados)
+                        res = api.update_user(*sargs)
                     else:
                         raise Exception('UPDATE unknown command')
 
                 if res:
-                    print(json.dumps(res, sort_keys=True, indent=4, ensure_ascii=False))
+                    print(json.dumps(res, sort_keys=True,
+                          indent=4, ensure_ascii=False))
             except ValueError:
                 print('Could not convert a type, read the manual')
             except requests.exceptions.HTTPError as e:

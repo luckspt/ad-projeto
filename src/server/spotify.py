@@ -7,16 +7,16 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 from typing import Dict
 from dotenv import load_dotenv
 from os import getenv
-from api import Api
+from reqs import Reqs
 
 load_dotenv()
 
 
 class Spotify:
-    api: Api = None
+    api: Reqs = None
 
     def __init__(self) -> None:
-        self.api = Api('https://api.spotify.com/v1')
+        self.api = Reqs('https://api.spotify.com/v1')
 
     def get_token(self):
         return getenv('SPOTIFY_TOKEN')

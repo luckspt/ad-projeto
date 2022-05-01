@@ -1,10 +1,16 @@
-from api import Api
+"""
+Aplicações Distribuídas - Projeto 3 - client/playlists.py
+Grupo: 21
+Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
+"""
+from reqs import Reqs
 
 
 class Playlists:
-    api: Api = None
+    api: Reqs = None
 
-    def __init__(self, api: Api) -> None:
+    def __init__(self, api: Reqs) -> None:
         self.api = api
 
     def create_artist(self, id_spotify: str):
@@ -103,4 +109,4 @@ class Playlists:
             'password': password
         }
 
-        return self.api.put('/utilizadores', data)
+        return self.api.put(f'/utilizadores/{id_user}', data)

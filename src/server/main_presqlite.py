@@ -24,11 +24,6 @@ AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
 spotify = Spotify()
 
 
-# Pré requisitos
-if sqlite3.sqlite_version_info < (3, 35, 0):
-    raise RuntimeError(
-        'SQLite 3.35.0 ou superior é necessário (ver README.txt)')
-
 # código do programa principal
 
 
@@ -153,16 +148,16 @@ def utilizadores_endpoint():
 
         try:
             cursor.execute(
-                'INSERT INTO utilizadores (nome, senha) VALUES (?, ?) RETURNING *', (nome, senha))
-            utilizador = cursor.fetchone()
+                'INSERT INTO utilizadores (nome, senha) VALUES (?, ?)', (nome, senha))
             db.commit()
 
-            return {
-                'utilizador': dict(utilizador)
-            }, 201
+            return '', 201
         except sqlite3.IntegrityError:
             raise ApiException(
-                'Utilizador já existe', f'O utilizador "{nome}" já existe', http_code=409)
+                'Utilizador já existe',
+                f'O utilizador "{nome}" já existe',
+                http_code=409
+            )
     elif request.method == 'DELETE':
         # ELIMINAR utilizadores
         cursor.execute('DELETE FROM utilizadores')
@@ -192,13 +187,10 @@ def utilizador_endpoint(uid: int):
         senha = body["senha"]
 
         cursor.execute(
-            'UPDATE utilizadores SET senha = ? WHERE id = ? RETURNING *', (senha, uid))
-        utilizador = cursor.fetchone()
+            'UPDATE utilizadores SET senha = ? WHERE id = ?', (senha, uid))
         db.commit()
 
-        return {
-            'utilizador': dict(utilizador)
-        }, 200
+        return '', 204
     elif request.method == 'DELETE':
         # ELIMINAR utilizador singular
         cursor.execute('DELETE FROM utilizadores WHERE id = ?', (uid,))
@@ -246,18 +238,11 @@ def utilizador_avaliacoes_endpoint(uid: int):
 
         try:
             cursor.execute(
-                'INSERT INTO playlists (id_user, id_musica, id_avaliacao) VALUES (?, ?, ?) RETURNING *',
+                'INSERT INTO playlists (id_user, id_musica, id_avaliacao) VALUES (?, ?, ?)',
                 (uid, musica, id_avaliacao))
-            avaliacao = cursor.fetchone()
             db.commit()
 
-            avaliacao = dict(avaliacao)
-            del avaliacao['id_avaliacao']
-            avaliacao['avaliacao'] = body['avaliacao']
-
-            return {
-                'avaliacao': avaliacao
-            }, 201
+            return '', 201
         except sqlite3.IntegrityError:
             raise ApiException(
                 'Erro de integridade', f'O utilizador "{uid}" ou a música "{musica}" não existem ou já existe uma avaliação do utilizador "{uid}" para a música "{musica}"', http_code=409)
@@ -288,18 +273,11 @@ def utilizador_avaliacao_endpoint(uid: int, mid: int):
 
     try:
         cursor.execute(
-            'UPDATE playlists SET id_avaliacao = ? WHERE id_user = ? AND id_musica = ? RETURNING *',
+            'UPDATE playlists SET id_avaliacao = ? WHERE id_user = ? AND id_musica = ?',
             (id_avaliacao, uid, mid))
-        avaliacao = cursor.fetchone()
         db.commit()
 
-        avaliacao = dict(avaliacao)
-        del avaliacao['id_avaliacao']
-        avaliacao['avaliacao'] = body['avaliacao']
-
-        return {
-            'avaliacao': avaliacao
-        }, 200
+        return '', 204
     except sqlite3.IntegrityError:
         raise ApiException(
             'Erro de integridade', f'O utilizador "{uid}" ou a música "{mid}" não existem ou a avaliação do utilizador "{uid}" para a música "{mid}" não existe', http_code=409)
@@ -335,13 +313,10 @@ def artistas_endpoint():
 
         try:
             cursor.execute(
-                'INSERT INTO artistas (id_spotify, nome) VALUES (?, ?) RETURNING *', (id_spotify, artista['name']))
-            artista = cursor.fetchone()
+                'INSERT INTO artistas (id_spotify, nome) VALUES (?, ?)', (id_spotify, artista['name']))
             db.commit()
 
-            return {
-                'artista': dict(artista)
-            }, 201
+            return '', 201
         except sqlite3.IntegrityError:
             raise ApiException(
                 'Erro de integridade', f'O artista "{id_spotify}" já existe', http_code=409)
@@ -444,14 +419,11 @@ def musicas_endpoint():
             artista = {'id': cursor.lastrowid}
 
         try:
-            cursor.execute('INSERT INTO musicas (id_spotify, nome, id_artista) VALUES (?, ?, ?) RETURNING *',
+            cursor.execute('INSERT INTO musicas (id_spotify, nome, id_artista) VALUES (?, ?, ?)',
                            (musica['id'], musica['name'], artista['id']))
-            musica = cursor.fetchone()
             db.commit()
 
-            return {
-                'musica': dict(musica)
-            }, 201
+            return '', 201
         except sqlite3.IntegrityError:
             raise ApiException(
                 'Erro de integridade', f'A música "{id_spotify}" já existe', http_code=409)

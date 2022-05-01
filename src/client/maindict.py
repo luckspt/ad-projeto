@@ -13,7 +13,7 @@ import json
 from typing import Callable, Dict, List, Union, Tuple
 import requests
 
-from api import Api
+from reqs import Reqs
 from playlists import Playlists
 
 
@@ -95,46 +95,45 @@ def main() -> None:
 
     try:
         base_url = f'http://{prog_args["address"]}:{prog_args["port"]}'
-        api = Api(base_url)
-        service = Playlists(api)
+        api = Playlists(Reqs(base_url))
 
         commands = {
             'EXIT': exit,
             'CREATE': {
-                'UTILIZADOR': (lambda args: len(args) == 2, service.create_user),
-                'ARTISTA': (lambda args: len(args) == 1, service.create_artist),
-                'MUSICA': (lambda args: len(args) == 1, service.create_music),
+                'UTILIZADOR': (lambda args: len(args) == 2, api.create_user),
+                'ARTISTA': (lambda args: len(args) == 1, api.create_artist),
+                'MUSICA': (lambda args: len(args) == 1, api.create_music),
             },
             'READ': {
-                'UTILIZADOR': (int_cmd_args, service.get_user),
-                'ARTISTA': (int_cmd_args, service.get_artist),
-                'MUSICA': (int_cmd_args, service.get_music),
+                'UTILIZADOR': (int_cmd_args, api.get_user),
+                'ARTISTA': (int_cmd_args, api.get_artist),
+                'MUSICA': (int_cmd_args, api.get_music),
                 'ALL': {
-                    'UTILIZADORES': service.get_all_users,
-                    'ARTISTAS': service.get_all_artists,
+                    'UTILIZADORES': api.get_all_users,
+                    'ARTISTAS': api.get_all_artists,
                     'MUSICAS': (
-                        lambda args: len(args) == 0 or (len(args) == 1 and args[0] in AVALIACOES), service.get_all_musics),
-                    'MUSICAS_A': (int_cmd_args, service.get_all_musics_artist),
-                    'MUSICAS_U': (int_cmd_args, service.get_all_musics_user),
+                        lambda args: len(args) == 0 or (len(args) == 1 and args[0] in AVALIACOES), api.get_all_musics),
+                    'MUSICAS_A': (int_cmd_args, api.get_all_musics_artist),
+                    'MUSICAS_U': (int_cmd_args, api.get_all_musics_user),
                 },
             },
             'DELETE': {
-                'UTILIZADOR': (int_cmd_args, service.delete_user),
-                'ARTISTA': (int_cmd_args, service.delete_artist),
-                'MUSICA': (int_cmd_args, service.delete_music),
+                'UTILIZADOR': (int_cmd_args, api.delete_user),
+                'ARTISTA': (int_cmd_args, api.delete_artist),
+                'MUSICA': (int_cmd_args, api.delete_music),
                 'ALL': {
-                    'UTILIZADORES': service.delete_all_users,
-                    'ARTISTAS': service.delete_all_artists,
+                    'UTILIZADORES': api.delete_all_users,
+                    'ARTISTAS': api.delete_all_artists,
                     'MUSICAS': (
-                        lambda args: len(args) == 0 or (len(args) == 1 and args[0] in AVALIACOES), service.delete_all_musics),
-                    'MUSICAS_A': (int_cmd_args, service.delete_all_musics_artist),
-                    'MUSICAS_U': (int_cmd_args, service.delete_all_musics_user),
+                        lambda args: len(args) == 0 or (len(args) == 1 and args[0] in AVALIACOES), api.delete_all_musics),
+                    'MUSICAS_A': (int_cmd_args, api.delete_all_musics_artist),
+                    'MUSICAS_U': (int_cmd_args, api.delete_all_musics_user),
                 },
             },
             'UPDATE': {
                 'MUSICA': (lambda args: len(args) == 3 and args[0].isdigit() and args[1] in AVALIACOES and args[2].isdigit(),
-                           service.update_music),
-                'UTILIZADOR': (lambda args: len(args) == 2 and args[0].isdigit(), service.update_user),
+                           api.update_music),
+                'UTILIZADOR': (lambda args: len(args) == 2 and args[0].isdigit(), api.update_user),
             }
         }
 
@@ -155,7 +154,7 @@ def main() -> None:
                         raise Exception(
                             'Invalid arguments for command CREATE UTILIZADOR')
 
-                    res = service.create_user_rating(*cargs)
+                    res = api.create_user_rating(*cargs)
                 else:
                     command = resolve_command(commands, cmd, cargs)
                     if not command:
