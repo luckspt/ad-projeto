@@ -40,18 +40,11 @@ def force_params(body: Dict[str, Any], keys: List[str], name: str) -> None:
 
 
 def connect_db(filename='playlists.db') -> Tuple[Connection, Cursor]:
-    db_is_created = isfile(filename)
     db = connect(filename)
     db.row_factory = Row
 
     cursor = db.cursor()
     cursor.execute("PRAGMA foreign_keys = ON")
-
-    if not db_is_created:
-        with open('schema.sql', 'r') as fschema:
-            schema = fschema.read()
-            cursor.executescript(schema)
-        db.commit()
 
     return db, cursor
 
@@ -88,6 +81,12 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
         help='Porto TCP onde o Servidor irá fornecer os recursos',
         type=int,
         default=9999
+    )
+
+    parser.add_argument(
+        '--dbname',
+        help='Nome da base de dados',
+        default='playlists.db'
     )
 
     parser.add_argument(
@@ -529,6 +528,16 @@ def main() -> None:
     """
     try:
         args = parse()
+
+        db_created = isfile(args['dbname'])
+        if not db_created:
+            with open('schema.sql', 'r') as fschema:
+                schema = fschema.read()
+
+                db, cursor = connect_db(args['dbname'])
+                cursor.executescript(schema)
+                db.commit()
+
         app.run(args['address'], args['port'], debug=args['debug'])
     except KeyboardInterrupt:
         exit()

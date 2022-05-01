@@ -56,7 +56,6 @@ def main() -> None:
         base_url = f'http://{args["address"]}:{args["port"]}'
         api = Playlists(Reqs(base_url))
 
-        res = None
 
         while True:
             try:
@@ -68,6 +67,7 @@ def main() -> None:
 
                 cmd, *cargs = cmdinp.split()
 
+                res = None
                 if not cmd:
                     raise Exception('unknown command')
                 elif cmd == 'EXIT':

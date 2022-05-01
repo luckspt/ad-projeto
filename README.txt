@@ -21,8 +21,9 @@ python3 main.py localhost 9999
 Usar `python3 main.py -h` para ver a ajuda/descrições dos argumentos
 
 # Requisitos
-Versão do sqlite3 >= 3.35.0 (https://www.sqlite.org/releaselog/3_35_0.html, ponto 4) devido à adição do comando `RETURNING`. Usar o ficheiro `main_presqlite.py` para versões anteriores.
+sqlite3 >= 3.35.0 (https://www.sqlite.org/releaselog/3_35_0.html, ponto 4) devido à adição do comando `RETURNING`. Usar o ficheiro `main_presqlite.py` para versões anteriores.
 dotenv (`pip3 install python-dotenv`)
+json >= 3.5 o package requests levanta uma exceção que apenas existe nesta versão (https://docs.python.org/3.5/library/json.html#json.JSONDecodeError)
 
 # Notas
 - Adicionámos AUTOINCREMENT no schema visto que os ids são sequenciais
