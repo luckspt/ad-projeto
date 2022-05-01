@@ -11,7 +11,7 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 from os.path import isfile
 from sqlite3 import Cursor, Row, connect, Connection
 import sqlite3
-from flask import Flask, request
+from flask import Flask, request, g
 from argparse import ArgumentParser
 from typing import Any, Dict, List, Union, Tuple
 
@@ -21,8 +21,9 @@ from exceptions import ApiException
 
 ###############################################################################
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
-spotify = Spotify()
+DBNAME = 'playlists.db'
 
+spotify = Spotify()
 
 # Pré requisitos
 if sqlite3.sqlite_version_info < (3, 35, 0):
@@ -39,8 +40,8 @@ def force_params(body: Dict[str, Any], keys: List[str], name: str) -> None:
                 f'"{key}" é obrigatório', f'"{key}" é obrigatório num objeto {name}', http_code=400)
 
 
-def connect_db(filename='playlists.db') -> Tuple[Connection, Cursor]:
-    db = connect(filename)
+def connect_db() -> Tuple[Connection, Cursor]:
+    db = connect(DBNAME)
     db.row_factory = Row
 
     cursor = db.cursor()
@@ -84,12 +85,6 @@ def parse() -> Dict[str, Union[str, int, bool, Tuple[str]]]:
     )
 
     parser.add_argument(
-        '--dbname',
-        help='Nome da base de dados',
-        default='playlists.db'
-    )
-
-    parser.add_argument(
         '--debug',
         help='Ativar debug do Flask',
         action='store_true'
@@ -105,6 +100,14 @@ app = Flask(__name__)
 
 # ------------------------------------
 # ---- Hooks
+@app.before_request
+def before_request():
+    conn, cursor = connect_db()
+
+    # Store as globals
+    g.db = conn
+    g.cursor = cursor
+
 @app.errorhandler(ApiException)
 def handle_api_err(error: ApiException):
     headers = {'Content-Type': 'application/api-problem+json'}
@@ -132,13 +135,11 @@ def handle_generic_err(e: HTTPException):
 
 @app.route('/utilizadores', methods=['GET', 'POST', 'DELETE'])
 def utilizadores_endpoint():
-    db, cursor = connect_db()
-
     if request.method == 'GET':
         # LISTAR utilizadores
-        cursor.execute('SELECT * FROM utilizadores')
+        g.cursor.execute('SELECT * FROM utilizadores')
 
-        utilizadores = cursor.fetchall() or ()
+        utilizadores = g.cursor.fetchall() or ()
 
         return {
             'utilizador': list(map(dict, utilizadores))
@@ -151,10 +152,10 @@ def utilizadores_endpoint():
         nome, senha = body["nome"], body["senha"]
 
         try:
-            cursor.execute(
+            g.cursor.execute(
                 'INSERT INTO utilizadores (nome, senha) VALUES (?, ?) RETURNING *', (nome, senha))
-            utilizador = cursor.fetchone()
-            db.commit()
+            utilizador = g.cursor.fetchone()
+            g.db.commit()
 
             return {
                 'utilizador': dict(utilizador)
@@ -164,18 +165,16 @@ def utilizadores_endpoint():
                 'Utilizador já existe', f'O utilizador "{nome}" já existe', http_code=409)
     elif request.method == 'DELETE':
         # ELIMINAR utilizadores
-        cursor.execute('DELETE FROM utilizadores')
-        db.commit()
+        g.cursor.execute('DELETE FROM utilizadores')
+        g.db.commit()
 
         return '', 204
 
 
 @app.route('/utilizadores/<int:uid>', methods=['GET', 'PUT', 'DELETE'])
 def utilizador_endpoint(uid: int):
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
-    utilizador = cursor.fetchone()
+    g.cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
+    utilizador = g.cursor.fetchone()
     if utilizador is None:
         raise ApiException('Utilizador não encontrado',
                            f'Utilizador com id "{uid}" não encontrado', http_code=404)
@@ -190,47 +189,51 @@ def utilizador_endpoint(uid: int):
 
         senha = body["senha"]
 
-        cursor.execute(
+        g.cursor.execute(
             'UPDATE utilizadores SET senha = ? WHERE id = ? RETURNING *', (senha, uid))
-        utilizador = cursor.fetchone()
-        db.commit()
+        utilizador = g.cursor.fetchone()
+        g.db.commit()
 
         return {
             'utilizador': dict(utilizador)
         }, 200
     elif request.method == 'DELETE':
         # ELIMINAR utilizador singular
-        cursor.execute('DELETE FROM utilizadores WHERE id = ?', (uid,))
-        db.commit()
+        g.cursor.execute('DELETE FROM utilizadores WHERE id = ?', (uid,))
+        g.db.commit()
 
         return '', 204
 
 
-@app.route('/utilizadores/<int:uid>/musicas', methods=['GET'])
+@app.route('/utilizadores/<int:uid>/musicas', methods=['GET', 'DELETE'])
 def utilizador_musicas_endpoint(uid: int):
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
-    utilizador = cursor.fetchone()
+    g.cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
+    utilizador = g.cursor.fetchone()
     if utilizador is None:
         raise ApiException('Utilizador não encontrado',
                            f'Utilizador com id "{uid}" não encontrado', http_code=404)
 
-    cursor.execute(
-        'SELECT * FROM musicas WHERE id IN (SELECT id_musica FROM playlists WHERE id_user = ?)', (uid,))
-    musicas = cursor.fetchall() or ()
+    if request.method == 'GET':
+        g.cursor.execute(
+            'SELECT * FROM musicas WHERE id IN (SELECT id_musica FROM playlists WHERE id_user = ?)', (uid,))
+        musicas = g.cursor.fetchall() or ()
 
-    return {
-        'musicas': list(map(dict, musicas))
-    }
+        return {
+            'musicas': list(map(dict, musicas))
+        }
+    elif request.method == 'DELETE':
+        # ELIMINAR todas as musicas de um utilizador
+        g.cursor.execute(
+            'DELETE FROM musicas WHERE id IN (SELECT id_musica FROM playlists WHERE id_user = ?)', (uid,))
+        g.db.commit()
+
+        return '', 204
 
 
 @app.route('/utilizadores/<int:uid>/avaliacoes', methods=['POST'])
 def utilizador_avaliacoes_endpoint(uid: int):
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
-    utilizador = cursor.fetchone()
+    g.cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
+    utilizador = g.cursor.fetchone()
     if utilizador is None:
         raise ApiException('Utilizador não encontrado',
                            f'Utilizador com id "{uid}" não encontrado', http_code=404)
@@ -241,14 +244,14 @@ def utilizador_avaliacoes_endpoint(uid: int):
         force_params(body, ['musica', 'avaliacao'], 'avaliacao')
 
         musica, avaliacao = body["musica"], body["avaliacao"]
-        id_avaliacao = get_avaliacao_id(avaliacao, cursor)
+        id_avaliacao = get_avaliacao_id(avaliacao, g.cursor)
 
         try:
-            cursor.execute(
+            g.cursor.execute(
                 'INSERT INTO playlists (id_user, id_musica, id_avaliacao) VALUES (?, ?, ?) RETURNING *',
                 (uid, musica, id_avaliacao))
-            avaliacao = cursor.fetchone()
-            db.commit()
+            avaliacao = g.cursor.fetchone()
+            g.db.commit()
 
             avaliacao = dict(avaliacao)
             del avaliacao['id_avaliacao']
@@ -264,17 +267,15 @@ def utilizador_avaliacoes_endpoint(uid: int):
 
 @app.route('/utilizadores/<int:uid>/avaliacoes/<int:mid>', methods=['PUT'])
 def utilizador_avaliacao_endpoint(uid: int, mid: int):
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
-    utilizador = cursor.fetchone()
+    g.cursor.execute('SELECT * FROM utilizadores WHERE id = ?', (uid,))
+    utilizador = g.cursor.fetchone()
     if utilizador is None:
         raise ApiException('Utilizador não encontrado',
                            f'Utilizador com id "{uid}" não encontrado', http_code=404)
 
-    cursor.execute(
+    g.cursor.execute(
         'SELECT * FROM playlists WHERE id_user = ? AND id_musica = ?', (uid, mid))
-    db_avaliacao = cursor.fetchone()
+    db_avaliacao = g.cursor.fetchone()
     if db_avaliacao is None:
         raise ApiException('Avaliação não encontrada',
                            f'Avaliação com id_user "{uid}" e id_musica "{mid}" não encontrada', http_code=404)
@@ -283,14 +284,14 @@ def utilizador_avaliacao_endpoint(uid: int, mid: int):
     force_params(body, ['avaliacao'], 'avaliacao')
 
     avaliacao = body["avaliacao"]
-    id_avaliacao = get_avaliacao_id(avaliacao, cursor)
+    id_avaliacao = get_avaliacao_id(avaliacao, g.cursor)
 
     try:
-        cursor.execute(
+        g.cursor.execute(
             'UPDATE playlists SET id_avaliacao = ? WHERE id_user = ? AND id_musica = ? RETURNING *',
             (id_avaliacao, uid, mid))
-        avaliacao = cursor.fetchone()
-        db.commit()
+        avaliacao = g.cursor.fetchone()
+        g.db.commit()
 
         avaliacao = dict(avaliacao)
         del avaliacao['id_avaliacao']
@@ -312,12 +313,10 @@ def utilizador_avaliacao_endpoint(uid: int, mid: int):
 
 @app.route('/artistas', methods=['GET', 'POST', 'DELETE'])
 def artistas_endpoint():
-    db, cursor = connect_db()
-
     if request.method == 'GET':
         # LISTAR artistas
-        cursor.execute('SELECT * FROM artistas')
-        artistas = cursor.fetchall() or ()
+        g.cursor.execute('SELECT * FROM artistas')
+        artistas = g.cursor.fetchall() or ()
 
         return {
             'artistas': list(map(dict, artistas))
@@ -333,10 +332,10 @@ def artistas_endpoint():
         artista = spotify.artist(id_spotify)
 
         try:
-            cursor.execute(
+            g.cursor.execute(
                 'INSERT INTO artistas (id_spotify, nome) VALUES (?, ?) RETURNING *', (id_spotify, artista['name']))
-            artista = cursor.fetchone()
-            db.commit()
+            artista = g.cursor.fetchone()
+            g.db.commit()
 
             return {
                 'artista': dict(artista)
@@ -347,18 +346,16 @@ def artistas_endpoint():
 
     elif request.method == 'DELETE':
         # ELIMINAR artistas
-        cursor.execute('DELETE FROM artistas')
-        db.commit()
+        g.cursor.execute('DELETE FROM artistas')
+        g.db.commit()
 
         return '', 204
 
 
 @app.route('/artistas/<int:aid>', methods=['GET', 'DELETE'])
 def artista_endpoint(aid: int):
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
-    artista = cursor.fetchone()
+    g.cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
+    artista = g.cursor.fetchone()
     if artista is None:
         raise ApiException('Artista não encontrado',
                            f'Artista com id "{aid}" não encontrado', http_code=404)
@@ -368,17 +365,15 @@ def artista_endpoint(aid: int):
         return dict(artista)
     elif request.method == 'DELETE':
         # ELIMINAR artista singular
-        cursor.execute('DELETE FROM artistas WHERE id = ?', (aid,))
-        db.commit()
+        g.cursor.execute('DELETE FROM artistas WHERE id = ?', (aid,))
+        g.db.commit()
 
         return '', 204
 
 
 @app.route('/artistas/<int:aid>/musicas', methods=['GET', 'DELETE'])
 def artista_musicas_endpoint(aid: int):
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
+    g.cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
     artista = cursor.fetchone()
     if artista is None:
         raise ApiException('Artista não encontrado',
@@ -386,17 +381,17 @@ def artista_musicas_endpoint(aid: int):
 
     if request.method == 'GET':
         # LISTAR musicas de artista singular
-        cursor.execute(
+        g.cursor.execute(
             'SELECT * FROM musicas WHERE id_artista = ?', (aid,))
-        musicas = cursor.fetchall() or ()
+        musicas = g.cursor.fetchall() or ()
 
         return {
             'musicas': list(map(dict, musicas))
         }
     elif request.method == 'DELETE':
         # ELIMINAR musicas de artista singular
-        cursor.execute('DELETE FROM musicas WHERE id_artista = ?', (aid,))
-        db.commit()
+        g.cursor.execute('DELETE FROM musicas WHERE id_artista = ?', (aid,))
+        g.db.commit()
 
         return '', 204
 
@@ -409,12 +404,10 @@ def artista_musicas_endpoint(aid: int):
 
 @app.route('/musicas', methods=['GET', 'POST', 'DELETE'])
 def musicas_endpoint():
-    db, cursor = connect_db()
-
     if request.method == 'GET':
         # LISTAR músicas
-        cursor.execute('SELECT * FROM musicas')
-        musicas = cursor.fetchall() or ()
+        g.cursor.execute('SELECT * FROM musicas')
+        musicas = g.cursor.fetchall() or ()
 
         return {
             'musicas': list(map(dict, musicas))
@@ -430,23 +423,23 @@ def musicas_endpoint():
 
         # Tratar do Artista
         s_artista = musica['artists'][0]
-        cursor.execute(
+        g.cursor.execute(
             'SELECT * FROM artistas WHERE id_spotify = ?', (s_artista['id'],))
-        artista = cursor.fetchone()
+        artista = g.cursor.fetchone()
 
         if not artista:
             # Artista não existe na bd ainda
-            cursor.execute('INSERT INTO artistas (id_spotify, nome) VALUES (?, ?)',
+            g.cursor.execute('INSERT INTO artistas (id_spotify, nome) VALUES (?, ?)',
                            (s_artista['id'], s_artista['name']))
-            db.commit()
+            g.db.commit()
 
-            artista = {'id': cursor.lastrowid}
+            artista = {'id': g.cursor.lastrowid}
 
         try:
-            cursor.execute('INSERT INTO musicas (id_spotify, nome, id_artista) VALUES (?, ?, ?) RETURNING *',
+            g.cursor.execute('INSERT INTO musicas (id_spotify, nome, id_artista) VALUES (?, ?, ?) RETURNING *',
                            (musica['id'], musica['name'], artista['id']))
-            musica = cursor.fetchone()
-            db.commit()
+            musica = g.cursor.fetchone()
+            g.db.commit()
 
             return {
                 'musica': dict(musica)
@@ -457,18 +450,16 @@ def musicas_endpoint():
 
     elif request.method == 'DELETE':
         # ELIMINAR musicas
-        cursor.execute('DELETE FROM musicas')
-        db.commit()
+        g.cursor.execute('DELETE FROM musicas')
+        g.db.commit()
 
         return '', 204
 
 
 @app.route('/musicas/<int:mid>', methods=['GET', 'DELETE'])
 def musica_endpoint(mid: int):
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT * FROM musicas WHERE id = ?', (mid,))
-    musica = cursor.fetchone()
+    g.cursor.execute('SELECT * FROM musicas WHERE id = ?', (mid,))
+    musica = g.cursor.fetchone()
     if musica is None:
         raise ApiException('Música não encontrada',
                            f'Música com id "{mid}" não encontrada', http_code=404)
@@ -478,8 +469,8 @@ def musica_endpoint(mid: int):
         return dict(musica)
     elif request.method == 'DELETE':
         # ELIMINAR música singular
-        cursor.execute('DELETE FROM musicas WHERE id = ?', (mid,))
-        db.commit()
+        g.cursor.execute('DELETE FROM musicas WHERE id = ?', (mid,))
+        g.db.commit()
 
         return '', 204
 
@@ -492,10 +483,8 @@ def avaliacao_musicas_endpoint(aid: str):
         raise ApiException(f'Avaliação inválida',
                            f'A avaliação "{aid}" não é válida', http_code=404)
 
-    db, cursor = connect_db()
-
-    cursor.execute('SELECT id FROM avaliacoes WHERE sigla = ?', (aid,))
-    avaliacao = cursor.fetchone()
+    g.cursor.execute('SELECT id FROM avaliacoes WHERE sigla = ?', (aid,))
+    avaliacao = g.cursor.fetchone()
     if not avaliacao:
         raise ApiException(
             'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
@@ -503,18 +492,18 @@ def avaliacao_musicas_endpoint(aid: str):
 
     if request.method == 'GET':
         # LISTAR músicas
-        cursor.execute(
+        g.cursor.execute(
             f'SELECT * FROM musicas WHERE id IN (SELECT id_musica FROM playlists WHERE id_avaliacao = ?)', (avaliacao,))
-        musicas = cursor.fetchall() or ()
+        musicas = g.cursor.fetchall() or ()
 
         return {
             'musicas': list(map(dict, musicas))
         }
     elif request.method == 'DELETE':
         # ELIMINAR músicas
-        cursor.execute(
+        g.cursor.execute(
             'DELETE FROM musicas WHERE id IN (SELECT id_musica FROM playlists WHERE id_avaliacao = ?)', (avaliacao,))
-        db.commit()
+        g.db.commit()
 
         return '', 204
 
@@ -529,12 +518,12 @@ def main() -> None:
     try:
         args = parse()
 
-        db_created = isfile(args['dbname'])
+        db_created = isfile(DBNAME)
         if not db_created:
             with open('schema.sql', 'r') as fschema:
                 schema = fschema.read()
 
-                db, cursor = connect_db(args['dbname'])
+                db, cursor = connect_db()
                 cursor.executescript(schema)
                 db.commit()
 

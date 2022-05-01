@@ -1,3 +1,10 @@
+/*
+Aplicações Distribuídas - Projeto 3 - server/schema.sql
+Grupo: 21
+Números de aluno: 56895, 56926
+Nomes de aluno: Matilde Silva, Lucas Pinto
+*/
+
 -- PRAGMA foreign_keys = ON;
 CREATE TABLE utilizadores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
