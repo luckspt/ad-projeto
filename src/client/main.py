@@ -13,7 +13,6 @@ import json
 from typing import Dict, Union, Tuple
 import requests
 
-from urllib3 import HTTPConnectionPool
 from api import Api
 
 # Programa principal

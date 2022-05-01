@@ -1,5 +1,4 @@
 -- PRAGMA foreign_keys = ON;
--- TODO unique
 CREATE TABLE utilizadores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT,

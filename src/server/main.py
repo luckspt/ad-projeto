@@ -23,6 +23,7 @@ from exceptions import ApiException
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
 spotify = Spotify()
 
+
 # código do programa principal
 
 
@@ -90,16 +91,15 @@ app = Flask(__name__)
 def handle_api_err(error: ApiException):
     headers = {'Content-Type': 'application/api-problem+json'}
 
-    http_code = error.http_code
     response = {
         'describedBy': error.described_by,
         'supportId': error.support_id,
-        'httpStatus': http_code,
+        'httpStatus': error.http_code,
         'title': error.title,
         'detail': error.detail,
     }
 
-    return response, http_code, headers
+    return response, error.http_code, headers
 
 
 @app.errorhandler(HTTPException)
@@ -114,6 +114,7 @@ def handle_sqlite_err(e: sqlite3.IntegrityError):
         e.args[0],
         400
     ))
+
 
 # ------------------------------------
 
@@ -146,10 +147,9 @@ def utilizadores_endpoint():
         utilizador = cursor.fetchone()
         db.commit()
 
-
         return {
-            'utilizador': dict(utilizador)
-        }, 201
+                   'utilizador': dict(utilizador)
+               }, 201
     elif request.method == 'DELETE':
         # ELIMINAR utilizadores
         cursor.execute('DELETE FROM utilizadores')
@@ -184,8 +184,8 @@ def utilizador_endpoint(uid: int):
         db.commit()
 
         return {
-            'utilizador': dict(utilizador)
-        }, 200
+                   'utilizador': dict(utilizador)
+               }, 200
     elif request.method == 'DELETE':
         # ELIMINAR utilizador singular
         cursor.execute('DELETE FROM utilizadores WHERE id = ?', (uid,))
@@ -210,30 +210,35 @@ def utilizador_musicas_endpoint(uid: int):
         force_params(body, ['musica', 'avaliacao'], 'avaliacao')
 
         musica, avaliacao = body["musica"], body["avaliacao"]
-        if avaliacao not in AVALIACOES:
-            raise ApiException(
-                'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+        id_avaliacao = get_avaliacao_id(avaliacao, cursor)
 
         cursor.execute(
-            'SELECT id FROM avaliacoes WHERE sigla = ?', (avaliacao,))
-        id_avaliacao = cursor.fetchone()
-        if not id_avaliacao:
-            raise ApiException(
-                'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
-        id_avaliacao = dict(id_avaliacao)['id']
-
-        cursor.execute(
-            'INSERT INTO playlists (id_user, id_musica, id_avaliacao) VALUES (?, ?, ?) RETURNING *', (uid, musica, id_avaliacao))
+            'INSERT INTO playlists (id_user, id_musica, id_avaliacao) VALUES (?, ?, ?) RETURNING *',
+            (uid, musica, id_avaliacao))
         avaliacao = cursor.fetchone()
         db.commit()
 
         avaliacao = dict(avaliacao)
-        del avaliacao['id_avaliacao'] 
+        del avaliacao['id_avaliacao']
         avaliacao['avaliacao'] = body['avaliacao']
 
         return {
-            'avaliacao': avaliacao
-        }, 201
+                   'avaliacao': avaliacao
+               }, 201
+
+
+def get_avaliacao_id(avaliacao, cursor):
+    if avaliacao not in AVALIACOES:
+        raise ApiException(
+            'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+    cursor.execute(
+        'SELECT id FROM avaliacoes WHERE sigla = ?', (avaliacao,))
+    id_avaliacao = cursor.fetchone()
+    if not id_avaliacao:
+        raise ApiException(
+            'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
+    id_avaliacao = dict(id_avaliacao)['id']
+    return id_avaliacao
 
 
 @app.route('/utilizadores/<int:uid>/avaliacoes/<int:mid>', methods=['PUT'])
@@ -257,29 +262,22 @@ def utilizador_avaliacao_endpoint(uid: int, mid: int):
     force_params(body, ['avaliacao'], 'avaliacao')
 
     avaliacao = body["avaliacao"]
-    if avaliacao not in AVALIACOES:
-        raise ApiException(
-            'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
-
-    cursor.execute('SELECT id FROM avaliacoes WHERE sigla = ?', (avaliacao,))
-    id_avaliacao = cursor.fetchone()
-    if not id_avaliacao:
-        raise ApiException(
-            'Avaliação inválida', f'A avaliação "{avaliacao}" é inválida', http_code=400)
-    id_avaliacao = dict(id_avaliacao)['id']
+    id_avaliacao = get_avaliacao_id(avaliacao, cursor)
 
     cursor.execute(
-        'UPDATE playlists SET id_avaliacao = ? WHERE id_user = ? AND id_musica = ? RETURNING *', (id_avaliacao, uid, mid))
+        'UPDATE playlists SET id_avaliacao = ? WHERE id_user = ? AND id_musica = ? RETURNING *',
+        (id_avaliacao, uid, mid))
     avaliacao = cursor.fetchone()
     db.commit()
 
     avaliacao = dict(avaliacao)
-    del avaliacao['id_avaliacao'] 
+    del avaliacao['id_avaliacao']
     avaliacao['avaliacao'] = body['avaliacao']
 
     return {
-        'avaliacao': avaliacao
-    }, 200
+               'avaliacao': avaliacao
+           }, 200
+
 
 # ------------------------------------
 
@@ -318,8 +316,8 @@ def artistas_endpoint():
         db.commit()
 
         return {
-            'artista': dict(artista)
-        }, 201
+                   'artista': dict(artista)
+               }, 201
 
     elif request.method == 'DELETE':
         # ELIMINAR artistas
@@ -375,6 +373,8 @@ def artista_musicas_endpoint(aid: int):
         db.commit()
 
         return '', 204
+
+
 # ------------------------------------
 
 # ------------------------------------
@@ -425,8 +425,8 @@ def musicas_endpoint():
         db.commit()
 
         return {
-            'musica': dict(musica)
-        }, 201
+                   'musica': dict(musica)
+               }, 201
 
     elif request.method == 'DELETE':
         # ELIMINAR musicas
@@ -490,6 +490,8 @@ def avaliacao_musicas_endpoint(aid: str):
         db.commit()
 
         return '', 204
+
+
 # ------------------------------------
 
 
