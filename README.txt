@@ -31,6 +31,6 @@ dotenv (`pip3 install python-dotenv`)
     - Os *links* `describedBy` e `supportId` são fictícios
 - Usámos o package dotenv para as variáveis de ambiente (OAuth2 token do Spotify).
     - Basta copiar o ficheiro **.env.example** para um **.env** (`cp .env.example .env`) e incluir um token
-- Classe `Api` que abstrai os pedidos GET/POST/PUT/DELETE
-    - TODO REMOVER O SYMLINK SE DER PROBLEMAS
-- Classe `Spotify` que abstrai os métodos necessários (GET Artist e GET Track) para o funcionamento do serviço, cliente da classe `Api` referida anteriormente
+- Classe `Reqs` que abstrai os pedidos GET/POST/PUT/DELETE
+- Classe `Spotify` que abstrai os métodos necessários (GET Artist e GET Track) para o funcionamento do serviço, cliente da classe `Reqs` referida anteriormente
+- Classe `Playlists` que abstrai os métodos necessários para a comunicação do cliente com o serviço, cliente da classe `Reqs` referida anteriormente

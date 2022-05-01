@@ -353,7 +353,7 @@ def main() -> None:
                 print('Could not convert a type, read the manual')
             except requests.exceptions.HTTPError as e:
                 print('HTTP error:', e)
-            except requests.exceptions.ConnectionError as e:
+            except requests.exceptions.ConnectionError:
                 print('Could not connect to API')
             except requests.exceptions.Timeout as e:
                 print('API Timeout:', e)

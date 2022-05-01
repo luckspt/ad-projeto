@@ -12,7 +12,7 @@ import requests
 def parse_response(res: requests.Response) -> Union[Dict[str, Any], None]:
     try:
         return res.json()
-    except requests.exceptions.JSONDecodeError as e:
+    except ValueError:
         return None
 
 
@@ -40,6 +40,3 @@ class Reqs:
     def delete(self, path: str, headers: Dict[str, str] = None) -> Union[Dict[str, Any], None]:
         res = requests.delete(f'{self.base_url}{path}', headers=headers)
         return parse_response(res)
-
-    def create_user_music(self, param):
-        pass
