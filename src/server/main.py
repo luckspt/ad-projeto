@@ -374,7 +374,7 @@ def artista_endpoint(aid: int):
 @app.route('/artistas/<int:aid>/musicas', methods=['GET', 'DELETE'])
 def artista_musicas_endpoint(aid: int):
     g.cursor.execute('SELECT * FROM artistas WHERE id = ?', (aid,))
-    artista = cursor.fetchone()
+    artista = g.cursor.fetchone()
     if artista is None:
         raise ApiException('Artista não encontrado',
                            f'Artista com id "{aid}" não encontrado', http_code=404)
