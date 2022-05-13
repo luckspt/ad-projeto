@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 3 - client/main.py
+Aplicações Distribuídas - Projeto 4 - client/main.py
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
@@ -9,12 +9,16 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 
 # Zona para fazer imports
 from argparse import ArgumentParser
-import json
 from typing import Dict, Union, Tuple
 import requests
-
+import json
 from reqs import Reqs
 from playlists import Playlists
+import urllib3
+
+# Desativar avisos do SubjectAltNameWarning
+urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
+
 
 # Programa principal
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
@@ -53,9 +57,9 @@ def main() -> None:
     args = parse()
 
     try:
-        base_url = f'http://{args["address"]}:{args["port"]}'
-        api = Playlists(Reqs(base_url))
-
+        base_url = f'https://{args["address"]}:{args["port"]}'
+        api = Playlists(Reqs(base_url, '../certs/root.pem',
+                        ('../certs/cli.crt', '../certs/cli.key')))
 
         while True:
             try:
@@ -345,6 +349,8 @@ def main() -> None:
                         res = api.update_user(*sargs)
                     else:
                         raise Exception('UPDATE unknown command')
+                else:
+                    raise Exception('unknown command')
 
                 if res:
                     print(json.dumps(res, sort_keys=True,

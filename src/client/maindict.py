@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 3 - client/main.py
+Aplicações Distribuídas - Projeto 4 - client/main.py
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
@@ -12,9 +12,12 @@ from argparse import ArgumentParser
 import json
 from typing import Callable, Dict, List, Union, Tuple
 import requests
-
 from reqs import Reqs
 from playlists import Playlists
+import urllib3
+
+# Desativar avisos do SubjectAltNameWarning
+urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 
 
 # Programa principal
@@ -95,7 +98,8 @@ def main() -> None:
 
     try:
         base_url = f'http://{prog_args["address"]}:{prog_args["port"]}'
-        api = Playlists(Reqs(base_url))
+        api = Playlists(Reqs(base_url, '../certs/root.pem',
+                        ('../certs/cli.crt', '../certs/cli.key')))
 
         commands = {
             'EXIT': exit,

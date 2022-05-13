@@ -1,5 +1,5 @@
 """
-Aplicações Distribuídas - Projeto 3 - server/exceptions.py
+Aplicações Distribuídas - Projeto 4 - server/exceptions.py
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto

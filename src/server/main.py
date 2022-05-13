@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Aplicações Distribuídas - Projeto 3 - server/main.py
+Aplicações Distribuídas - Projeto 4 - server/main.py
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
@@ -9,24 +9,28 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 
 # Zona para fazer importação
 from os.path import isfile
-from sqlite3 import Cursor, Row, connect, Connection
+from sqlite3 import Cursor, Row, connect, Connection, sqlite_version_info
 import sqlite3
-from flask import Flask, request, g
+from flask import Flask, request, g, redirect
 from argparse import ArgumentParser
 from typing import Any, Dict, List, Union, Tuple
-
 from werkzeug.exceptions import HTTPException
 from spotify import Spotify
 from exceptions import ApiException
+from dotenv import load_dotenv
+from os import getenv
+import ssl
+
+load_dotenv()
 
 ###############################################################################
 AVALIACOES = {'M', 'm', 'S', 'B', 'MB'}
 DBNAME = 'playlists.db'
 
-spotify = Spotify()
+spotify = Spotify(getenv('SPOTIFY_CLIENT_ID'), getenv('SPOTIFY_CLIENT_SECRET'))
 
 # Pré requisitos
-if sqlite3.sqlite_version_info < (3, 35, 0):
+if sqlite_version_info < (3, 35, 0):
     raise RuntimeError(
         'SQLite 3.35.0 ou superior é necessário (ver README.txt)')
 
@@ -108,6 +112,7 @@ def before_request():
     g.db = conn
     g.cursor = cursor
 
+
 @app.errorhandler(ApiException)
 def handle_api_err(error: ApiException):
     headers = {'Content-Type': 'application/api-problem+json'}
@@ -128,6 +133,26 @@ def handle_generic_err(e: HTTPException):
     return handle_api_err(ApiException(e.name, e.description, e.code))
 
 # ------------------------------------
+
+# ------------------------------------
+# ---- Auth
+
+
+@app.route('/login', methods=["GET"])
+def login():
+    auth_url = spotify.authorize()
+    return redirect(auth_url)
+
+
+@app.route('/callback', methods=["GET"])
+def callback():
+    spotify.fetch_token(request.url)
+    return redirect('/profile')
+
+
+@app.route('/profile', methods=["GET"])
+def profile():
+    return spotify.me()
 
 # ------------------------------------
 # ---- Utilizadores
@@ -430,14 +455,14 @@ def musicas_endpoint():
         if not artista:
             # Artista não existe na bd ainda
             g.cursor.execute('INSERT INTO artistas (id_spotify, nome) VALUES (?, ?)',
-                           (s_artista['id'], s_artista['name']))
+                             (s_artista['id'], s_artista['name']))
             g.db.commit()
 
             artista = {'id': g.cursor.lastrowid}
 
         try:
             g.cursor.execute('INSERT INTO musicas (id_spotify, nome, id_artista) VALUES (?, ?, ?) RETURNING *',
-                           (musica['id'], musica['name'], artista['id']))
+                             (musica['id'], musica['name'], artista['id']))
             musica = g.cursor.fetchone()
             g.db.commit()
 
@@ -527,7 +552,15 @@ def main() -> None:
                 cursor.executescript(schema)
                 db.commit()
 
-        app.run(args['address'], args['port'], debug=args['debug'])
+        context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS_SERVER)
+        context.verify_mode = ssl.CERT_REQUIRED
+        context.load_verify_locations(cafile='../certs/root.pem')
+        context.load_cert_chain(
+            certfile='../certs/serv.crt', keyfile='../certs/serv.key')
+
+        spotify.api.redirect_uri = f'https://{args["address"]}:{args["port"]}/callback'
+        app.run(args['address'], args['port'],
+                debug=args['debug'], ssl_context=context)
     except KeyboardInterrupt:
         exit()
     except Exception as e:

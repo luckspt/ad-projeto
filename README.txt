@@ -1,4 +1,4 @@
-Aplicações Distribuídas - Projeto 3 - README.txt
+Aplicações Distribuídas - Projeto 4 - README.txt
 Grupo: 21
 Números de aluno: 56895, 56926
 Nomes de aluno: Matilde Silva, Lucas Pinto
@@ -6,7 +6,7 @@ Nomes de aluno: Matilde Silva, Lucas Pinto
 # Instruções de execução:
 ## Servidor
 ```bash
-cd src/server
+cd grupo21/server
 python3 main.py localhost 9999
 ```
 
@@ -14,7 +14,7 @@ Usar `python3 main.py -h` para ver a ajuda/descrições dos argumentos
 
 ## Cliente
 ```bash
-cd src/client
+cd grupo21/client
 python3 main.py localhost 9999
 ```
 
