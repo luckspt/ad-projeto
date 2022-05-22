@@ -22,16 +22,15 @@ Usar `python3 main.py -h` para ver a ajuda/descrições dos argumentos
 
 # Requisitos
 sqlite3 >= 3.35.0 (https://www.sqlite.org/releaselog/3_35_0.html, ponto 4) devido à adição do comando `RETURNING`. Usar o ficheiro `main_presqlite.py` para versões anteriores.
-dotenv (`pip3 install python-dotenv`)
-json >= 3.5 o package requests levanta uma exceção que apenas existe nesta versão (https://docs.python.org/3.5/library/json.html#json.JSONDecodeError)
+dotenv (`pip3 install python-dotenv`) para carregar o ID e SECRET da app do Spotify - `cd grupo21/server`, `cp .env.example .env`, `nano .env`
+json >= 3.5 o package requests levanta uma exceção que apenas existe a partir desta versão (https://docs.python.org/3.5/library/json.html#json.JSONDecodeError)
 
 # Notas
-- Adicionámos AUTOINCREMENT no schema visto que os ids são sequenciais
-- Alterámos a row_factory do sqlite para `sqlite3.Row` de forma a obtermos dicionários em vez de tuplos nos pedidos à base de dados
-- Implementámos um `errorhandler` e um tipo de exceção (`ApiException`) para tratar da descrição detalhada de problemas
-    - Os *links* `describedBy` e `supportId` são fictícios
-- Usámos o package dotenv para as variáveis de ambiente (OAuth2 token do Spotify).
-    - Basta copiar o ficheiro **.env.example** para um **.env** (`cp .env.example .env`) e incluir um token
-- Classe `Reqs` que abstrai os pedidos GET/POST/PUT/DELETE
-- Classe `Spotify` que abstrai os métodos necessários (GET Artist e GET Track) para o funcionamento do serviço, cliente da classe `Reqs` referida anteriormente
+- Usámos o package dotenv para as variáveis de ambiente (Client ID e Secret).
+    - Basta copiar o ficheiro **.env.example** para um **.env** (`cp .env.example .env`) e incluir as chaves `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET`
+- Classe `Spotify` que abstrai os métodos necessários (GET Artist e GET Track) para o funcionamento do serviço, que agora utiliza o módulo OAuth2Session
 - Classe `Playlists` que abstrai os métodos necessários para a comunicação do cliente com o serviço, cliente da classe `Reqs` referida anteriormente
+
+# Modificações ao Projeto 3
+- verificação do sqlite < 3.35.0 que corria num import do ficheiro `main_presqlite.py` movida para a função main
+- agora apenas existe uma conexão global à BD, definida na thread principal que inicializa o Flask, e usada pelos threads dos endpoints da API (ignoramos o problema de concorrência)
